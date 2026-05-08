@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fes Route Prototype</title>
+    <link rel="stylesheet" href="../src/styles/app.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Fes Route / Prototype</p>
+          <h1>フェスの周り順を、その場で組んで共有</h1>
+          <p class="lede">サンプルタイムテーブルを見ながら、見たいアーティストを選ぶと周り順を自動で並べます。URL 共有もここで試せます。</p>
+        </div>
+        <div class="hero-actions">
+          <button id="share-button" class="primary">共有URLをコピー</button>
+          <button id="reset-button" class="ghost">選択をリセット</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 id="event-name"></h2>
+              <p id="event-meta" class="muted"></p>
+            </div>
+            <div class="legend">
+              <span><i class="dot selected"></i>選択中</span>
+              <span><i class="dot conflict"></i>時間衝突あり</span>
+            </div>
+          </div>
+          <div id="timetable" class="timetable"></div>
+        </section>
+
+        <aside class="sidebar">
+          <section class="panel">
+            <h2>あなたの周り順</h2>
+            <p id="route-summary" class="muted">まだ未選択です。</p>
+            <ol id="route-list" class="route-list"></ol>
+          </section>
+
+          <section class="panel">
+            <h2>このプロトタイプで見たいこと</h2>
+            <ul class="notes">
+              <li>タイムテーブルから迷わず選べるか</li>
+              <li>時間衝突がすぐ分かるか</li>
+              <li>共有URLだけで十分か</li>
+            </ul>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="../src/app.js"></script>
+  </body>
+</html>
