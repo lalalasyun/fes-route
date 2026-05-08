@@ -13,7 +13,9 @@
 - timetable viewer
 - route planner
 - shareable plan page
+- theme switcher
 - event / artist / stage data layer
+- design token layer
 
 ## Data model / identifiers
 - event
@@ -22,6 +24,8 @@
 - timeslot
 - user_plan
 - plan_entry
+- theme
+- recommended_theme
 
 ## External dependencies
 - フェス情報のデータソース（未定）
@@ -35,3 +39,11 @@
 - データ更新フロー
 - 移動時間ロジックの粒度
 - 保存・編集のための認証要否
+- テーマ推奨を event metadata で持つか user preference で上書きするかの最終仕様
+
+## UI theming direction
+- レイアウトと情報設計は 1本化する
+- `pop / standard / rock` を theme token で切り替える
+- テーマ差分は color / typography emphasis / radius / texture に閉じ込める
+- 状態表現（selected / conflict / disabled）の意味は全テーマで固定する
+- 詳細は `docs/ui-themes.md` と `docs/screens.md` を参照

@@ -1,13 +1,17 @@
 # Backlog
 
 ## Next up
+- [ ] theme switcher UI を追加する
+- [ ] Standard テーマを token 化する
+- [ ] Pop / Rock token を実装する
+- [ ] shared URL に theme を含める
 - [ ] フェスデータの入力方式を決める
 - [ ] 1イベント分のサンプルデータを用意する
-- [ ] タイムテーブル表示UIのラフを作る
 - [ ] 周り順のデータ構造を決める
 - [ ] 共有URLの最小仕様を決める
 
 ## Later
+- [ ] イベントごとの recommendedTheme を持てるようにする
 - [ ] おすすめアーティスト導線
 - [ ] プレイリスト連携
 - [ ] コメント / 感想
