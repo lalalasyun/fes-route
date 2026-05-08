@@ -1,13 +1,20 @@
 # Backlog
 
 ## Next up
-- [ ] Clarify product brief
-- [ ] Define MVP
-- [ ] Pick product shape
-- [ ] Set up initial structure
+- [ ] フェスデータの入力方式を決める
+- [ ] 1イベント分のサンプルデータを用意する
+- [ ] タイムテーブル表示UIのラフを作る
+- [ ] 周り順のデータ構造を決める
+- [ ] 共有URLの最小仕様を決める
 
 ## Later
-- [ ] Add implementation milestones
+- [ ] おすすめアーティスト導線
+- [ ] プレイリスト連携
+- [ ] コメント / 感想
+- [ ] 過去参加フェス一覧
+- [ ] 出演履歴と回遊履歴の可視化
 
 ## Icebox
-- [ ] Nice-to-have ideas
+- [ ] 「この人を見た人はこれも見ている」導線
+- [ ] フレンド比較
+- [ ] 当日通知

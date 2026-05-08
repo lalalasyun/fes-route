@@ -1,42 +1,27 @@
-# Product Repo Template
+# Fes Route
 
-A flexible template for starting new product repositories from a short idea.
+フェスのタイムテーブルから、自分だけの周り順を作って共有できる web app。
 
-## What this template optimizes for
+## One-liner
 
-- Fast repo creation from vague ideas
-- Low-ceremony product planning
-- Works for many product shapes: web app, API, CLI, bot, library, automation, research, full-stack
-- Lets you start generic, then add structure only when needed
+出演時間・会場移動・見たいアーティストをもとに、無理のないフェス回遊プランを作る。
 
-## Core files
+## Initial MVP
 
-- `docs/brief.md` — one-page product brief
-- `docs/scope.md` — MVP and non-goals
-- `docs/architecture.md` — technical shape
-- `docs/backlog.md` — next tasks and milestones
-- `docs/adr/` — architecture decision records
+- タイムテーブル閲覧
+- 見たいアーティストを選んで自分の周り順を作成
+- 共有URLでプラン共有
 
-## Optional structure bootstrap
+## Next ideas
 
-Use the helper script when you know the rough product shape:
+- おすすめアーティスト提案
+- アーティスト単位のプレイリスト導線
+- コメント / 感想
+- 過去フェス参加履歴と出演履歴
 
-```bash
-bash scripts/bootstrap-structure.sh generic
-bash scripts/bootstrap-structure.sh webapp
-bash scripts/bootstrap-structure.sh api
-bash scripts/bootstrap-structure.sh cli
-bash scripts/bootstrap-structure.sh bot
-bash scripts/bootstrap-structure.sh library
-bash scripts/bootstrap-structure.sh fullstack
-bash scripts/bootstrap-structure.sh research
-```
+## Docs
 
-The script only creates missing directories/files and is safe to run early.
-
-## Suggested workflow
-
-1. Rename the product in `README.md` and `docs/brief.md`
-2. Fill in MVP / user / constraints
-3. Run `scripts/bootstrap-structure.sh <mode>` if helpful
-4. Start implementation only after `docs/scope.md` is minimally clear
+- `docs/brief.md` — プロダクトの要約
+- `docs/scope.md` — MVP と非目標
+- `docs/architecture.md` — 初期アーキテクチャ仮説
+- `docs/backlog.md` — 次の打ち手

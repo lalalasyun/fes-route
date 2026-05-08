@@ -1,30 +1,37 @@
 # Product Brief
 
 ## Name
-- Product name:
-- Repo slug:
+- Product name: Fes Route
+- Repo slug: fes-route
 
 ## One-liner
-- What is it?
+- フェス参加者がタイムテーブルを見ながら、自分の周り順を作成・共有できる web app。
 
 ## User / customer
-- Who is this for?
-- What pain are they feeling now?
+- フェスやサーキットイベントに行く参加者
+- 複数アーティストの時間・会場移動を見比べながら、どれを見るか決めたい人
 
 ## Problem
-- What problem are we trying to solve?
-- Why now?
+- 見たいアーティストが多いほど、タイムテーブルと移動制約の整理が面倒になる
+- SNS で共有されたおすすめや友人の回り方も見たいが、情報が散らばりやすい
+- フェス当日に迷わず動ける形に落とし込めるツールが弱い
 
 ## MVP
-- Smallest version that is still useful:
+- フェスのタイムテーブルをイベント単位で閲覧できる
+- 見たいアーティストを選ぶと、自分用の周り順を組める
+- できたプランを共有URLで他人に見せられる
 
 ## Success signal
-- What would make us say "this is working"?
+- 1つのフェスについて、参加前に自分のプランを作って保存・共有できる
+- 「誰を見るか決める時間」が短くなったと感じられる
+- 友人どうしでプラン比較や共有が自然に発生する
 
 ## Constraints
-- Tech constraints:
-- Time constraints:
-- Data / legal / rights constraints:
+- Tech constraints: 初期は webapp 前提。データ投入方法は未定
+- Time constraints: まずは 1イベントに対する MVP を早く成立させる
+- Data / legal / rights constraints: タイムテーブル・アーティスト情報の取得元と利用条件を確認する必要がある
 
 ## Open questions
-- 
+- タイムテーブルデータは手入力、CSV、スクレイピング、外部APIのどれで扱うか
+- ログインなし共有で十分か、保存機能まで最初から必要か
+- おすすめロジックを MVP 外に出すか、簡易版だけ先に入れるか
