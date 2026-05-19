@@ -86,20 +86,60 @@ function toMinutes(time) {
   return hours * 60 + minutes;
 }
 
+function rangesOverlap(left, right) {
+  return toMinutes(left.start) < toMinutes(right.end) && toMinutes(right.start) < toMinutes(left.end);
+}
+
 function getSelectedSlots() {
   const festival = getCurrentFestival();
   if (!festival) {
     return [];
   }
 
-  return festival.slots
+  const selected = festival.slots
     .filter((slot) => state.selectedIds.has(slot.id))
-    .sort((a, b) => toMinutes(a.start) - toMinutes(b.start))
-    .map((slot, index, all) => {
-      const prev = all[index - 1];
-      const conflict = prev ? toMinutes(slot.start) < toMinutes(prev.end) : false;
-      return { ...slot, conflict };
+    .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
+
+  const conflictIds = new Set();
+  selected.forEach((slot, index) => {
+    selected.slice(index + 1).forEach((candidate) => {
+      if (rangesOverlap(slot, candidate)) {
+        conflictIds.add(slot.id);
+        conflictIds.add(candidate.id);
+      }
     });
+  });
+
+  return selected.map((slot) => ({ ...slot, conflict: conflictIds.has(slot.id) }));
+}
+
+function formatTimeLabel(minutes) {
+  const hours = String(Math.floor(minutes / 60)).padStart(2, '0');
+  const mins = String(minutes % 60).padStart(2, '0');
+  return `${hours}:${mins}`;
+}
+
+function getTimelineMetrics(festival) {
+  const starts = festival.slots.map((slot) => toMinutes(slot.start));
+  const ends = festival.slots.map((slot) => toMinutes(slot.end));
+  const firstMinute = Math.min(...starts);
+  const lastMinute = Math.max(...ends);
+  const startMinute = Math.floor(firstMinute / 30) * 30;
+  const endMinute = Math.ceil(lastMinute / 30) * 30;
+  const totalMinutes = Math.max(endMinute - startMinute, 30);
+  const halfHourMarks = [];
+
+  for (let minute = startMinute; minute <= endMinute; minute += 30) {
+    halfHourMarks.push(minute);
+  }
+
+  return {
+    startMinute,
+    endMinute,
+    totalMinutes,
+    halfHourMarks,
+    timelineHeight: Math.max(totalMinutes * 2, 420),
+  };
 }
 
 function toggleSlot(slotId) {
@@ -197,34 +237,71 @@ function renderTimetable() {
     return;
   }
 
+  if (festival.slots.length === 0) {
+    timetable.innerHTML = '';
+    return;
+  }
+
   const selected = getSelectedSlots();
   const conflictIds = new Set(selected.filter((slot) => slot.conflict).map((slot) => slot.id));
-
-  const stageHtml = festival.stages.map((stage) => {
-    const slots = festival.slots.filter((slot) => slot.stageId === stage.id);
-    const slotHtml = slots.length > 0
-      ? slots.map((slot) => {
-        const selectedClass = state.selectedIds.has(slot.id) ? 'selected' : '';
-        const conflictClass = conflictIds.has(slot.id) ? 'conflict' : '';
-        return `
-          <button class="slot ${selectedClass} ${conflictClass}" data-slot-id="${slot.id}">
-            <div class="slot-time">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)}</div>
-            <div class="slot-artist">${escapeHtml(slot.artist)}</div>
-            <div class="slot-stage">${escapeHtml(stage.name)}</div>
-          </button>
-        `;
-      }).join('')
-      : '<p class="muted">このステージにはまだタイムテーブル行がありません。</p>';
+  const metrics = getTimelineMetrics(festival);
+  const stageCount = festival.stages.length;
+  const stageIndexById = new Map(festival.stages.map((stage, index) => [stage.id, index]));
+  const axisHtml = metrics.halfHourMarks.map((minute) => `
+    <div
+      class="timeline-axis-label ${minute % 60 === 0 ? 'major' : 'minor'}"
+      style="top: ${((minute - metrics.startMinute) / metrics.totalMinutes) * 100}%"
+    >
+      ${escapeHtml(formatTimeLabel(minute))}
+    </div>
+  `).join('');
+  const laneHtml = festival.stages.map((stage, index) => `
+    <div class="timeline-lane ${index < stageCount - 1 ? 'with-divider' : ''}" aria-hidden="true"></div>
+  `).join('');
+  const slotHtml = festival.slots.map((slot) => {
+    const stageIndex = stageIndexById.get(slot.stageId) ?? 0;
+    const startMinute = toMinutes(slot.start);
+    const endMinute = toMinutes(slot.end);
+    const selectedClass = state.selectedIds.has(slot.id) ? 'selected' : '';
+    const conflictClass = conflictIds.has(slot.id) ? 'conflict' : '';
+    const top = ((startMinute - metrics.startMinute) / metrics.totalMinutes) * 100;
+    const height = ((endMinute - startMinute) / metrics.totalMinutes) * 100;
+    const stage = festival.stages[stageIndex];
 
     return `
-      <section class="stage-column">
-        <h3>${escapeHtml(stage.name)}</h3>
-        <div class="slot-list">${slotHtml}</div>
-      </section>
+      <button
+        class="timeline-slot ${selectedClass} ${conflictClass}"
+        data-slot-id="${slot.id}"
+        style="--lane:${stageIndex}; --slot-top:${top}; --slot-height:${height};"
+        aria-label="${escapeHtml(`${slot.artist} ${slot.start}-${slot.end} ${stage?.name ?? ''}`)}"
+      >
+        <div class="slot-time">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)}</div>
+        <div class="slot-artist">${escapeHtml(slot.artist)}</div>
+        <div class="slot-stage">${escapeHtml(stage?.shortName ?? stage?.name ?? '')}</div>
+      </button>
     `;
   }).join('');
 
-  timetable.innerHTML = stageHtml;
+  timetable.innerHTML = `
+    <section class="timeline-board" style="--stage-count:${stageCount}; --timeline-height:${metrics.timelineHeight}px;">
+      <div class="timeline-header">
+        <div class="timeline-header-spacer">Time</div>
+        ${festival.stages.map((stage) => `
+          <div class="timeline-stage-heading">
+            <span class="timeline-stage-short">${escapeHtml(stage.shortName ?? stage.name)}</span>
+            <span class="timeline-stage-full">${escapeHtml(stage.name)}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="timeline-body">
+        <div class="timeline-axis">${axisHtml}</div>
+        <div class="timeline-grid">
+          <div class="timeline-grid-backdrop">${laneHtml}</div>
+          <div class="timeline-slots">${slotHtml}</div>
+        </div>
+      </div>
+    </section>
+  `;
   timetable.querySelectorAll('[data-slot-id]').forEach((button) => {
     button.addEventListener('click', () => toggleSlot(button.dataset.slotId));
   });
