@@ -94,6 +94,7 @@ export function buildSampleFestival(dataModel, eventId) {
     .map((stage) => ({
       id: stage.id,
       name: stage.name,
+      shortName: stage.shortName || stage.name,
     }));
 
   const slots = dataModel.timetableEntries
