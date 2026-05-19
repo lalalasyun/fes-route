@@ -21,7 +21,7 @@
       </header>
 
       <main class="layout">
-        <section class="panel">
+        <section class="panel main-panel">
           <div class="panel-header">
             <div>
               <h2 id="event-name"></h2>
@@ -32,10 +32,88 @@
               <span><i class="dot conflict"></i>時間衝突あり</span>
             </div>
           </div>
+          <div id="empty-state" class="empty-state" hidden></div>
           <div id="timetable" class="timetable"></div>
         </section>
 
         <aside class="sidebar">
+          <section class="panel">
+            <div class="panel-header stacked">
+              <div>
+                <h2>管理入力</h2>
+                <p class="muted">イベント、ステージ、タイムテーブルを手動で登録します。</p>
+              </div>
+              <label class="field">
+                <span>編集中のイベント</span>
+                <select id="event-switcher"></select>
+              </label>
+            </div>
+
+            <div class="admin-stack">
+              <form id="event-form" class="admin-form">
+                <h3>イベント行を追加</h3>
+                <p id="event-form-message" class="form-message" hidden></p>
+                <label class="field">
+                  <span>イベント名</span>
+                  <input id="event-form-name" name="name" type="text" placeholder="Tokyo Sound Weekend 2026" required />
+                </label>
+                <div class="field-row">
+                  <label class="field">
+                    <span>開催日</span>
+                    <input id="event-form-date" name="startDate" type="date" required />
+                  </label>
+                  <label class="field">
+                    <span>終了日</span>
+                    <input id="event-form-end-date" name="endDate" type="date" />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>会場</span>
+                  <input id="event-form-venue" name="venueName" type="text" placeholder="Shinkiba Bay Area" required />
+                </label>
+                <button class="primary" type="submit">イベントを追加</button>
+              </form>
+
+              <form id="stage-form" class="admin-form">
+                <h3>ステージ行を追加</h3>
+                <p id="stage-form-message" class="form-message" hidden></p>
+                <label class="field">
+                  <span>ステージ名</span>
+                  <input id="stage-form-name" name="name" type="text" placeholder="Sunrise Stage" required />
+                </label>
+                <label class="field">
+                  <span>短縮名</span>
+                  <input id="stage-form-short-name" name="shortName" type="text" placeholder="Sunrise" />
+                </label>
+                <button class="primary" type="submit">ステージを追加</button>
+              </form>
+
+              <form id="entry-form" class="admin-form">
+                <h3>タイムテーブル行を追加</h3>
+                <p id="entry-form-message" class="form-message" hidden></p>
+                <label class="field">
+                  <span>アーティスト名</span>
+                  <input id="entry-form-artist" name="artist" type="text" placeholder="New Band" required />
+                </label>
+                <label class="field">
+                  <span>ステージ</span>
+                  <select id="entry-form-stage" name="stageId" required></select>
+                </label>
+                <div class="field-row">
+                  <label class="field">
+                    <span>開始</span>
+                    <input id="entry-form-start" name="start" type="time" required />
+                  </label>
+                  <label class="field">
+                    <span>終了</span>
+                    <input id="entry-form-end" name="end" type="time" required />
+                  </label>
+                </div>
+                <button class="primary" type="submit">タイムテーブル行を追加</button>
+              </form>
+            </div>
+          </section>
+
           <section class="panel">
             <h2>あなたの周り順</h2>
             <p id="route-summary" class="muted">まだ未選択です。</p>
