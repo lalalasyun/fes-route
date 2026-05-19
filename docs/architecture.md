@@ -42,6 +42,8 @@
 - theme
 - recommended_theme
 
+Canonical field definitions, relation rules, and duplicate-prevention constraints live in `docs/data-model.md`.
+
 ## External dependencies
 - チケットサイト（eplus / ぴあ / ローチケ / LivePocket / Zaiko など）
 - 公式サイト
