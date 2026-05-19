@@ -45,9 +45,11 @@ npm run dev
 ## Docs
 
 - `docs/brief.md` — プロダクトの要約
+- `docs/requirements.md` — 要件定義
 - `docs/scope.md` — MVP と非目標
 - `docs/architecture.md` — 初期アーキテクチャ仮説
 - `docs/ui-themes.md` — テーマ設計と token 方針
 - `docs/screens.md` — 画面仕様
 - `docs/design-spec.md` — デザイン起点の詳細仕様
 - `docs/backlog.md` — 次の打ち手
+- `docs/symphony-guide.md` — Symphony / GitHub Projects runner 運用
