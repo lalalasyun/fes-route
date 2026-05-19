@@ -84,7 +84,7 @@ export const sampleDataModel = {
   userPlanEntries: [],
 };
 
-function buildSampleFestival(dataModel, eventId) {
+export function buildSampleFestival(dataModel, eventId) {
   const event = dataModel.events.find((item) => item.id === eventId);
   const artistsById = new Map(dataModel.artists.map((artist) => [artist.id, artist]));
 
