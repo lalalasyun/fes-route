@@ -13,8 +13,10 @@
           <p class="eyebrow">Fes Route / Prototype</p>
           <h1>フェスの周り順を、その場で組んで共有</h1>
           <p class="lede">サンプルタイムテーブルを見ながら、見たいアーティストを選ぶと周り順を自動で並べます。URL 共有もここで試せます。</p>
+          <p id="shared-context" class="shared-context" hidden></p>
         </div>
         <div class="hero-actions">
+          <button id="open-personal-plan-button" class="ghost" hidden>自分の周り順として開く</button>
           <button id="share-button" class="primary">共有URLをコピー</button>
           <button id="reset-button" class="ghost">選択をリセット</button>
         </div>
@@ -37,7 +39,7 @@
         </section>
 
         <aside class="sidebar">
-          <section class="panel">
+          <section id="admin-panel" class="panel">
             <div class="panel-header stacked">
               <div>
                 <h2>管理入力</h2>
