@@ -1,9 +1,21 @@
 import { buildSampleFestival, sampleDataModel } from './lib/sample-data.js';
 
+const STORAGE_KEY_PREFIX = 'fes-route:plan:';
+
+function readHashState() {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  return {
+    eventId: params.get('event') ?? '',
+    selectedIds: (params.get('plan') ?? '').split(',').filter(Boolean),
+    isSharedView: params.get('view') === 'shared',
+  };
+}
+
 const state = {
   dataModel: structuredClone(sampleDataModel),
-  activeEventId: sampleDataModel.events[0]?.id ?? '',
-  selectedIds: new Set(loadSelectedIds()),
+  activeEventId: '',
+  selectedIds: new Set(),
+  isSharedView: false,
 };
 
 const eventName = document.querySelector('#event-name');
@@ -12,9 +24,12 @@ const timetable = document.querySelector('#timetable');
 const emptyState = document.querySelector('#empty-state');
 const routeList = document.querySelector('#route-list');
 const routeSummary = document.querySelector('#route-summary');
+const sharedContext = document.querySelector('#shared-context');
+const openPersonalPlanButton = document.querySelector('#open-personal-plan-button');
 const shareButton = document.querySelector('#share-button');
 const resetButton = document.querySelector('#reset-button');
 const eventSwitcher = document.querySelector('#event-switcher');
+const adminPanel = document.querySelector('#admin-panel');
 
 const eventForm = document.querySelector('#event-form');
 const stageForm = document.querySelector('#stage-form');
@@ -25,16 +40,42 @@ const stageFormMessage = document.querySelector('#stage-form-message');
 const entryFormMessage = document.querySelector('#entry-form-message');
 const entryStageSelect = document.querySelector('#entry-form-stage');
 
-function loadSelectedIds() {
-  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const raw = params.get('plan');
-  return raw ? raw.split(',').filter(Boolean) : [];
+function getPlanStorageKey(eventId) {
+  return `${STORAGE_KEY_PREFIX}${eventId}`;
+}
+
+function loadStoredSelectedIds(eventId) {
+  if (!eventId) {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(getPlanStorageKey(eventId));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((value) => typeof value === 'string' && value) : [];
+  } catch {
+    return [];
+  }
 }
 
 function persistSelectedIds() {
+  if (!state.isSharedView && state.activeEventId) {
+    try {
+      window.localStorage.setItem(getPlanStorageKey(state.activeEventId), JSON.stringify(Array.from(state.selectedIds)));
+    } catch {
+      // Hash state still keeps the current plan shareable if storage is unavailable.
+    }
+  }
+
   const params = new URLSearchParams();
+  if (state.activeEventId) {
+    params.set('event', state.activeEventId);
+  }
   if (state.selectedIds.size > 0) {
     params.set('plan', Array.from(state.selectedIds).join(','));
+  }
+  if (state.isSharedView) {
+    params.set('view', 'shared');
   }
   const nextHash = params.toString();
   history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ''}`);
@@ -64,6 +105,24 @@ function escapeHtml(value) {
 
 function getCurrentEvent() {
   return state.dataModel.events.find((event) => event.id === state.activeEventId) ?? null;
+}
+
+function setActiveEventFromState(eventId) {
+  const fallbackEventId = state.dataModel.events[0]?.id ?? '';
+  const nextEventId = state.dataModel.events.some((event) => event.id === eventId) ? eventId : fallbackEventId;
+  state.activeEventId = nextEventId;
+  return nextEventId;
+}
+
+function hydrateStateFromLocation() {
+  const hashState = readHashState();
+  const activeEventId = setActiveEventFromState(hashState.eventId);
+  state.isSharedView = hashState.isSharedView;
+  state.selectedIds = new Set(
+    hashState.selectedIds.length > 0 || state.isSharedView
+      ? hashState.selectedIds
+      : loadStoredSelectedIds(activeEventId)
+  );
 }
 
 function getCurrentStages() {
@@ -143,6 +202,10 @@ function getTimelineMetrics(festival) {
 }
 
 function toggleSlot(slotId) {
+  if (state.isSharedView) {
+    return;
+  }
+
   if (state.selectedIds.has(slotId)) {
     state.selectedIds.delete(slotId);
   } else {
@@ -274,6 +337,7 @@ function renderTimetable() {
         data-slot-id="${slot.id}"
         style="--lane:${stageIndex}; --slot-top:${top}; --slot-height:${height};"
         aria-label="${escapeHtml(`${slot.artist} ${slot.start}-${slot.end} ${stage?.name ?? ''}`)}"
+        ${state.isSharedView ? 'disabled' : ''}
       >
         <div class="slot-time">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)}</div>
         <div class="slot-artist">${escapeHtml(slot.artist)}</div>
@@ -312,7 +376,9 @@ function renderRoute() {
   const stagesById = getStageMap();
 
   if (selected.length === 0) {
-    routeSummary.textContent = 'まだ未選択です。タイムテーブルから気になるアーティストを選んでください。';
+    routeSummary.textContent = state.isSharedView
+      ? 'この共有プランにはまだ選択された出演枠がありません。'
+      : 'まだ未選択です。タイムテーブルから気になるアーティストを選んでください。';
     routeList.innerHTML = '';
     return;
   }
@@ -321,10 +387,18 @@ function renderRoute() {
   routeSummary.textContent = `${selected.length}組を選択中 / ${conflictCount > 0 ? `${conflictCount}件の時間衝突あり` : '時間衝突なし'}`;
   routeList.innerHTML = selected.map((slot) => `
     <li class="route-item ${slot.conflict ? 'conflict' : ''}">
-      <strong>${escapeHtml(slot.artist)}</strong><br />
-      <span class="muted">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)} / ${escapeHtml(stagesById.get(slot.stageId)?.name ?? '未設定ステージ')}</span>
+      <div class="route-item-row">
+        <div>
+          <strong>${escapeHtml(slot.artist)}</strong><br />
+          <span class="muted">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)} / ${escapeHtml(stagesById.get(slot.stageId)?.name ?? '未設定ステージ')}</span>
+        </div>
+        ${state.isSharedView ? '' : `<button class="route-remove" type="button" data-remove-slot-id="${slot.id}">外す</button>`}
+      </div>
     </li>
   `).join('');
+  routeList.querySelectorAll('[data-remove-slot-id]').forEach((button) => {
+    button.addEventListener('click', () => toggleSlot(button.dataset.removeSlotId));
+  });
 }
 
 function showToast(message) {
@@ -336,9 +410,19 @@ function showToast(message) {
 }
 
 async function copyShareUrl() {
-  persistSelectedIds();
+  const shareUrl = new URL(window.location.href);
+  const params = new URLSearchParams();
+  if (state.activeEventId) {
+    params.set('event', state.activeEventId);
+  }
+  if (state.selectedIds.size > 0) {
+    params.set('plan', Array.from(state.selectedIds).join(','));
+  }
+  params.set('view', 'shared');
+  shareUrl.hash = params.toString();
+
   try {
-    await navigator.clipboard.writeText(window.location.href);
+    await navigator.clipboard.writeText(shareUrl.toString());
     showToast('共有URLをコピーしました');
   } catch {
     showToast('URLコピーに失敗しました');
@@ -346,17 +430,31 @@ async function copyShareUrl() {
 }
 
 function resetPlan() {
+  if (state.isSharedView) {
+    return;
+  }
+
   state.selectedIds.clear();
   persistSelectedIds();
   render();
 }
 
 function switchActiveEvent(eventId) {
+  if (state.isSharedView) {
+    return;
+  }
+
   state.activeEventId = eventId;
-  state.selectedIds.clear();
+  state.selectedIds = new Set(loadStoredSelectedIds(eventId));
   persistSelectedIds();
   setMessage(stageFormMessage, '');
   setMessage(entryFormMessage, '');
+  render();
+}
+
+function openSharedPlanAsPersonal() {
+  state.isSharedView = false;
+  persistSelectedIds();
   render();
 }
 
@@ -440,6 +538,7 @@ function handleCreateEvent(event) {
 
   state.activeEventId = eventId;
   state.selectedIds.clear();
+  state.isSharedView = false;
   persistSelectedIds();
   eventForm.reset();
   setMessage(eventFormMessage, 'イベント行を追加しました。続けてステージを登録できます。');
@@ -579,22 +678,40 @@ function handleCreateTimetableEntry(event) {
 
 function render() {
   const festival = getCurrentFestival();
+  const selected = getSelectedSlots();
+  const conflictCount = selected.filter((slot) => slot.conflict).length;
 
   updateEventSwitcher();
   updateEntryStageOptions();
 
   eventName.textContent = festival?.name ?? 'イベント未選択';
   eventMeta.textContent = festival ? `${festival.date} / ${festival.venue}` : '管理入力からイベントを追加してください。';
+  sharedContext.hidden = !state.isSharedView;
+  sharedContext.textContent = state.isSharedView
+    ? `ログイン不要の共有ビューです。${selected.length}組を表示中${conflictCount > 0 ? ` / ${conflictCount}件の時間衝突あり` : ''}。`
+    : '';
+  openPersonalPlanButton.hidden = !state.isSharedView;
+  adminPanel.hidden = state.isSharedView;
+  shareButton.textContent = state.isSharedView ? 'この共有URLをコピー' : '共有URLをコピー';
+  resetButton.disabled = state.isSharedView;
+  eventSwitcher.disabled = state.isSharedView;
 
   renderTimetable();
   renderRoute();
 }
 
+hydrateStateFromLocation();
+
 shareButton.addEventListener('click', copyShareUrl);
 resetButton.addEventListener('click', resetPlan);
+openPersonalPlanButton.addEventListener('click', openSharedPlanAsPersonal);
 eventSwitcher.addEventListener('change', (event) => switchActiveEvent(event.target.value));
 eventForm.addEventListener('submit', handleCreateEvent);
 stageForm.addEventListener('submit', handleCreateStage);
 entryForm.addEventListener('submit', handleCreateTimetableEntry);
+window.addEventListener('hashchange', () => {
+  hydrateStateFromLocation();
+  render();
+});
 
 render();

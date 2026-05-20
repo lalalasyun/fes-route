@@ -40,6 +40,17 @@ button { font: inherit; }
 .eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; margin: 0 0 8px; }
 h1 { margin: 0 0 12px; font-size: clamp(30px, 5vw, 52px); line-height: 1.05; }
 .lede { margin: 0; color: var(--muted); max-width: 760px; line-height: 1.7; }
+.shared-context {
+  margin: 14px 0 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(118, 228, 195, .28);
+  background: rgba(118, 228, 195, .10);
+  color: var(--text);
+  font-size: 14px;
+}
 .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .primary, .ghost {
   padding: 12px 16px;
@@ -188,6 +199,14 @@ h1 { margin: 0 0 12px; font-size: clamp(30px, 5vw, 52px); line-height: 1.05; }
   overflow: hidden;
 }
 .timeline-slot:hover { border-color: var(--accent-2); transform: translateY(-1px); }
+.timeline-slot:disabled {
+  cursor: default;
+  opacity: .92;
+}
+.timeline-slot:disabled:hover {
+  border-color: var(--line);
+  transform: none;
+}
 .timeline-slot.selected { border-color: var(--accent); background: rgba(118, 228, 195, .12); }
 .timeline-slot.conflict {
   border-color: var(--danger);
@@ -256,7 +275,22 @@ h1 { margin: 0 0 12px; font-size: clamp(30px, 5vw, 52px); line-height: 1.05; }
 }
 .route-list { margin: 16px 0 0; padding-left: 20px; display: grid; gap: 12px; }
 .route-item { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.route-item-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
 .route-item.conflict strong::after { content: ' 衝突'; color: var(--danger); font-size: 12px; margin-left: 8px; }
+.route-remove {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
 .notes { padding-left: 18px; line-height: 1.8; }
 .toast {
   position: fixed; right: 20px; bottom: 20px; background: #10172c; border: 1px solid var(--line);
@@ -285,6 +319,10 @@ h1 { margin: 0 0 12px; font-size: clamp(30px, 5vw, 52px); line-height: 1.05; }
     flex-direction: column;
   }
   .field-row { grid-template-columns: 1fr; }
+  .route-item-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
   .timeline-board {
     padding: 10px;
     gap: 10px;
