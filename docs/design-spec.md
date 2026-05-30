@@ -134,6 +134,188 @@ Mobile:
 - conflict warning
 - share / reset actions（desktop では重複可）
 
+### 5.2.1 Mock-aligned frontend direction
+
+共有モック3案から、初期実装は **dark utility + festival accent** を採用する。
+
+採用するもの:
+- 1枚目の実用性: 上部ナビ、左タイムテーブル、右の固定ルートパネル、共有CTA
+- 2枚目の楽しさ: ステージ別の強い色分け、星/お気に入り、当日感のある小さな装飾
+- 3枚目の密度: 大きすぎないヘッダー、縦時間軸、警告の明確さ、編集/保存/クリアの操作群
+
+採用しないもの:
+- 2枚目の過度な装飾量。MVPでは背景花火や大きなイラストより、情報密度と読みやすさを優先する
+- 1枚目の大きなマーケティング風ヒーロー。実画面の主役はタイムテーブルにする
+- 3枚目の単色ロック寄りトーン固定。イベントごとにテーマ差し替えできる前提を残す
+
+初期の見た目:
+- 背景: 深い navy / black を基調に、薄いフェス波形または光の線を控えめに入れる
+- カード: 角丸 8-12px、透明度のある dark surface、細い border
+- CTA: `共有URLをコピー` を最も強いボタンにし、teal to blue または theme accent で目立たせる
+- 警告: `時間衝突あり` は赤系の専用 block と badge を使い、選択色より優先する
+- ステージ色: stage token を持ち、slot card / lane tint / route item accent に同じ色を使う
+- 文字: 日本語を読みやすくするため、本文は 14-16px、カード内タイトルは 15-18px に留める
+
+画面の第一印象:
+- desktop: 「フェス用の実用ツール」に見える。左右2ペインで、その場で編集できる
+- mobile: 「今日どこを回るか」に集中する。マイプランを先に見せ、必要に応じてタイムテーブルを開く
+- shared view: 「友人のプランを見る」画面に見える。編集操作を減らし、複製/自分用に開く導線を強くする
+
+### 5.2.2 Navigation model
+
+Top navigation はモック共通の構造を踏襲する。
+
+Primary tabs:
+- `タイムテーブル`
+- `マイルート`
+- `アーティスト`
+- `マップ`
+- `ステージ情報`
+
+MVPで実装する active tab:
+- `タイムテーブル`
+- `マイルート` は同一画面内の右パネル / mobile tray に対応する
+
+MVPでは placeholder に留めるもの:
+- `アーティスト`
+- `マップ`
+- `ステージ情報`
+
+Header actions:
+- search icon: 将来のアーティスト検索
+- bookmark icon: 保存済みプラン
+- profile/menu icon: 将来のログイン/表示名
+
+未実装項目は押せない装飾にせず、`Coming soon` toast を返す。ユーザーが現在使える機能を誤解しないようにする。
+
+### 5.2.3 Desktop composition
+
+Desktop では 1024px 以上を基準に、次の比率にする。
+
+- App shell max-width: 1440px
+- Outer padding: 20-24px
+- Main grid: `minmax(680px, 1fr) 360px`
+- Timetable panel: 左に大きく配置
+- Route panel: 右に sticky 表示、viewport 内でスクロール
+
+上から順:
+1. Compact global nav
+2. Event command bar
+3. Main split layout
+
+Event command bar:
+- 左: day switcher / date / event name
+- 中: search / filter / stage filter
+- 右: weather or venue mini info, optional
+
+Timetable panel:
+- 左端に time axis
+- 横に stage lanes
+- lane header は icon + stage name + short label
+- slot card は実時間に比例して配置
+- selected / favorite / conflict / tentative の状態を重ねて表示できる
+
+Route panel:
+- 上部: `あなたの周り順`、編集ボタン
+- summary metrics: 選択数、移動時間、衝突数
+- conflict alert: 衝突時のみ赤い block
+- route list: timeline stepper 形式
+- bottom: 強い share CTA、補助 action
+
+### 5.2.4 Mobile composition
+
+Mobile は desktop の縮小ではなく、当日利用を優先する。
+
+Default order:
+1. Compact header
+2. Event/day selector
+3. Route summary tray
+4. Timetable
+
+Route summary tray:
+- sticky bottom または timetable 上部の collapsible panel
+- `選択 N組 / 移動 M分 / 衝突あり` を常時見せる
+- `共有URLをコピー` は tray 展開時に表示する
+
+Timetable mobile behavior:
+- stage lanes は横スクロール
+- time axis は左固定
+- slot card は最小幅 132px 以上を確保
+- stage filter で1-2ステージだけ表示できる
+
+Shared view mobile:
+- 共有された route list を先に出す
+- timetable は `タイムテーブルで見る` で下に続く
+- `自分の周り順として開く` を share CTA より上に置く
+
+### 5.2.5 Route planning details
+
+モックの右パネルに合わせ、route item は単なる選択リストではなく「移動順」に見せる。
+
+Route item fields:
+- order number
+- artist
+- time range
+- stage
+- stage color accent
+- favorite/bookmark action
+- conflict marker
+- move gap to next item
+
+Move gap:
+- stage が変わる場合は `徒歩 N分`
+- 同じ stage の場合は `同ステージ`
+- gap が短すぎる場合は warning: `移動余裕が少ない`
+- 時間が重なる場合は danger: `時間衝突あり`
+
+Conflict rules:
+- 時間重複は赤 alert と route item badge の両方に出す
+- route item 内には「どの予定と重なるか」を1行で出す
+- timetable 側の該当 slot も danger border にする
+
+Initial movement model:
+- `same stage = 0分`
+- `different stage = stage distance matrix`
+- matrix 未登録時は fallback `徒歩5分`
+
+### 5.2.6 Design tokens
+
+Theme は機能差ではなく token 差にする。
+
+Base tokens:
+- `--app-bg`
+- `--surface`
+- `--surface-strong`
+- `--border`
+- `--text`
+- `--muted`
+- `--accent`
+- `--accent-contrast`
+- `--danger`
+- `--warning`
+- `--success`
+
+Stage tokens:
+- `--stage-blue`
+- `--stage-green`
+- `--stage-sunset`
+- `--stage-red`
+- `--stage-neutral`
+
+Component tokens:
+- `--slot-radius: 10px`
+- `--panel-radius: 14px`
+- `--button-radius: 10px`
+- `--shadow-panel`
+- `--shadow-active`
+
+Theme presets:
+- Standard: 1枚目寄り。teal / blue accent、実用寄り
+- Pop: 2枚目寄り。pink / cyan / yellow accent、楽しいが情報優先
+- Rock: 3枚目寄り。red / warm gray accent、高密度
+
+MVP の default は Standard。
+
 ### 5.3 Timetable grid behavior
 
 初期仕様:
