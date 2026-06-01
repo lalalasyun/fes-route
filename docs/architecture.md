@@ -51,9 +51,11 @@ Canonical field definitions, relation rules, and duplicate-prevention constraint
 - 公式タイムテーブル画像 / PDF
 
 ## Deployment / runtime
+- 本実装は Next.js App Router + Supabase Postgres/Auth/Storage + Drizzle + Vercel を第一候補にする
 - まずは単一 webapp として開始
 - 認証なしの閲覧・共有を優先する
 - 個人プランは local storage または anonymous share id で保持する
+- 詳細は `docs/technology-selection.md` を参照
 
 ## Unknowns
 - 対応するチケットサイトの優先順位

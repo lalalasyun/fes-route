@@ -48,6 +48,7 @@ npm run dev
 - `docs/requirements.md` — 要件定義
 - `docs/scope.md` — MVP と非目標
 - `docs/architecture.md` — 初期アーキテクチャ仮説
+- `docs/technology-selection.md` — 本実装向け技術選定
 - `docs/ui-themes.md` — テーマ設計と token 方針
 - `docs/screens.md` — 画面仕様
 - `docs/design-spec.md` — デザイン起点の詳細仕様

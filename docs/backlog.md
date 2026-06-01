@@ -2,6 +2,8 @@
 
 ## Next up
 - [ ] モック準拠の app shell を実装する
+- [ ] Next.js + TypeScript app へ prototype を移行する
+- [ ] Supabase Postgres / Drizzle の初期 schema と migrations を追加する
 - [ ] compact global nav と event command bar を追加する
 - [ ] Standard theme の design tokens を実装する
 - [ ] stage color tokens を slot card / lane / route item に適用する
