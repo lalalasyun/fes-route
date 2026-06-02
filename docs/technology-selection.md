@@ -4,72 +4,92 @@
 
 ## 推奨構成
 
-本実装は、小さめの full-stack TypeScript web app として作る。
+本実装は **Cloudflare Workers を中心にした full-stack TypeScript web app** として作る。
 
-- app framework: Next.js App Router + React + TypeScript
-- styling: CSS modules または Tailwind CSS + project-owned design tokens
-- database: Supabase Postgres
-- auth: Supabase Auth、初期は admin のみ
-- storage: Supabase Storage、event image / timetable image / source attachment 用
-- schema / migrations: Drizzle ORM + Drizzle migrations
-- deployment: web app は Vercel、database/auth/storage は Supabase
-- background work: 初期は admin-triggered server job。import adapter に retry が必要になってから queue を入れる
+- runtime / hosting: Cloudflare Workers
+- static assets: Workers Static Assets
+- app / API framework: Hono
+- type-safe client: Hono RPC (`hc`)
+- validation: Zod + `@hono/zod-validator`
+- database: Cloudflare D1
+- storage: Cloudflare R2
+- auth: Better Auth
+- admin / CMS: Payload CMS
+- frontend: React + Vite + TypeScript
+- styling: Tailwind CSS + shadcn/ui + project-owned design tokens
+- secrets: Doppler + Cloudflare secrets / bindings
+- product tracking: Linear project
+- deployment: Cloudflare Workers Builds + Wrangler
 
 現在の vanilla JS prototype は挙動確認用として残し、本格実装は persistent plan、admin review、ticket-site import helper を入れる前にこの構成へ移す。
 
+## Decision
+
+Pages or Workers で悩む場合、Fes Route は **Workers を第一候補**にする。
+
+Pages が強いのは、静的 frontend に軽い Functions を足す構成。Fes Route は Hono RPC、D1、R2、Better Auth、admin workflow、import helper を同じ product boundary に置きたいので、Worker を主役にしたほうが設計がまっすぐになる。
+
+Workers Static Assets を使えば、frontend assets と Worker logic を同じ deploy unit に置ける。通常の page / asset request は static assets に逃がし、`/api/*` や auth / admin / import helper だけ Worker を優先する構成にできる。
+
+GitHub Actions に依存しない方針も、Cloudflare Workers Builds / Git integration をまず使う。外部 CI SaaS を増やすより、Cloudflare native build と Wrangler manual deploy の組み合わせで始める。
+
 ## Fes Route に合う理由
 
-Fes Route は mobile web が主導線で、domain は小さいが relational。中心は events、stages、artists、timetable entries、user plans、groups、proposals、sources。難所は独自 infrastructure ではなく、データ品質、共有、admin workflow。
+Fes Route は mobile web が主導線で、domain は小さいが relational。中心は events、stages、artists、timetable entries、user plans、groups、proposals、sources。難所は heavy infrastructure ではなく、データ品質、共有、admin workflow。
 
-Next.js は public pages、shared plan pages、admin screens、server-side mutations を1つの app に置ける。App Router は server-rendered routes と client islands を併用できるので、読み物に近い timetable page と、操作が多い route planner を分けやすい。
+Workers + Hono は、公開ページ、API、share page、admin mutation、import helper を軽い TypeScript boundary でまとめやすい。Hono RPC を使うと server route の型を frontend client に共有できるので、small team / agent-driven implementation でも API contract を崩しにくい。
 
-Supabase Postgres は document store より canonical event model に合う。duplicate prevention、proposal review、timetable join、share token、group comparison は relational constraints と index の恩恵が大きい。
+D1 は Fes Route の初期規模に合う。event / timetable / plan / proposal の schema を SQL migration として明示し、D1 binding 経由で Worker から扱う。大量分析や complex relational workload が必要になったら Postgres を再検討する。
 
-Drizzle は schema を repo に明示できる。既存 docs も relational な model として整理されているので、migration も code と同じように review できる形がよい。
+R2 は event hero images、timetable images、PDFs、source screenshots の保存先にする。canonical text fields は R2 object ではなく D1 に置く。
 
-Vercel は UI-heavy な iteration の preview deploy が軽い。Next.js の convention とも合い、product shape が動いている間の deploy surface を小さくできる。
+Better Auth は attendee flow をログイン必須にしないまま、admin / future account upgrade の auth boundary を置くために使う。MVP では public users は login なし、admin users は auth 必須にする。
+
+Payload CMS は管理画面として使う。ただし Cloudflare Worker 内に無理に同居させるのではなく、admin / CMS runtime は別 deploy unit として扱い、media storage を R2、canonical app API を Workers に寄せる方針にする。
 
 ## Stack details
 
 ### Frontend
 
-- Next.js App Router
-- event / timetable reads は React Server Components
-- timetable selection、route tray、theme switcher、group comparison interactions は Client Components
+- React + Vite
+- Tailwind CSS
+- shadcn/ui
 - TypeScript everywhere
-- まずは install-free な mobile web app。offline / 当日利用が重要になったら PWA を検討する
+- Hono RPC client (`hc`) で API を呼ぶ
+- timetable selection、route tray、theme switcher、group comparison interactions は client-side UI として作る
 
-Tailwind でも CSS modules でも、design tokens は project-owned にする。`pop / standard / rock` themes は別 component tree ではなく token 差分に閉じ込める。
+まずは install-free な mobile web app。offline / 当日利用が hard requirement になったら PWA を検討する。
 
-### Backend
+`pop / standard / rock` themes は別 component tree ではなく token 差分に閉じ込める。shadcn/ui は土台として使い、Fes Route 固有の状態表現、stage color、route conflict、theme token は project-owned にする。
 
-- API-style endpoints は Next.js Route Handlers
-- admin forms や単純な mutation は、UI が簡単になる範囲で Server Actions
-- canonical writes は server-only DB access
+### Backend / API
+
+- Hono on Cloudflare Workers
+- Hono RPC で route 型を frontend に共有する
+- validation は Zod + `@hono/zod-validator`
+- public read API と admin mutation API を分ける
+- canonical writes は server-only path に閉じる
 - public share pages は internal numeric ID ではなく opaque `shareId` で解決する
 
-次のどれかが出るまでは、独立 API service は作らない。
-
-- ticket-site import に long-running retry が必要
-- 複数 client が stable external API を必要とする
-- web app deploy が重い background work と結合してつらくなる
+route 定義は chained method と declared variable から `AppType` を export する。frontend は `hc<AppType>('/api')` を使い、TanStack Query などに載せる。
 
 ### Database
 
-- Supabase Postgres
-- Drizzle schema / migrations を repo に置く
+- Cloudflare D1
+- migrations は repo に置く
 - public entities は stable slug
 - share links / invitations は opaque token
-- duplicate prevention は unique constraints を使う。特に event source URL、event date / venue / name candidate、timetable entry identity
+- duplicate prevention は unique constraints と candidate scoring を併用する
+- source URL、event date / venue / name candidate、timetable entry identity は特に重複防止を意識する
 
-exposed schema は RLS を有効にする。MVP では server-side code 経由の read が中心でも、RLS policy を置いておくと defense in depth になり、将来の accidental broad client access を防ぎやすい。
+Fes Route は canonical event model を守ることが重要なので、browser direct DB access ではなく Worker API 経由の read/write を基本にする。
 
 ### Auth and permissions
 
 MVP:
 
 - public users は login なしで browse、local artist selection、share link open ができる
-- admin users は Supabase Auth で login
+- admin users は Better Auth で login
 - user event / timetable edits は proposal として保存し、canonical data へ直接 write しない
 
 Later:
@@ -81,16 +101,29 @@ abuse 対策や persistence requirement が強くなるまでは、core attendee
 
 ### Assets and source files
 
-- event hero images、timetable images、PDFs、source screenshots は Supabase Storage
+- event hero images、timetable images、PDFs、source screenshots は R2
 - source metadata は `event_sources` に保存
-- canonical text fields は storage object ではなく Postgres に置く
+- canonical text fields は storage object ではなく D1 に置く
+- upload path は event / source / proposal 単位で namespacing する
+
+### Admin / CMS
+
+Payload CMS は admin 画面と editorial workflow の候補にする。
+
+- event / stage / artist / timetable entry の CRUD
+- proposal review queue
+- source attachment 管理
+- duplicate candidate review
+- publish / archive workflow
+
+Payload を Cloudflare Workers runtime に押し込む前提にはしない。CMS runtime、database adapter、deployment target は別途検証し、Fes Route public app の runtime boundary とは分ける。
 
 ### Import helpers
 
 MVP の import helpers は unattended crawler ではなく operator tool として扱う。
 
 - admin が ticket-site / official URL を貼る
-- server が取れる範囲を fetch する
+- Worker が取れる範囲を fetch する
 - admin が review / edit してから保存する
 - import result には source URL、fetched time、confidence/status を残す
 
@@ -103,62 +136,98 @@ MVP の import helpers は unattended crawler ではなく operator tool とし�
 
 retry、rate-limit handling、scheduled refresh が必要になった段階で durable queue を入れる。
 
+### Secrets and environment
+
+- Doppler を canonical secret source にする
+- Cloudflare binding / secret は runtime deploy に必要な値だけ置く
+- local dev は Doppler から `wrangler dev` / app dev command に注入する
+- D1 / R2 binding names は env ごとに明示する
+
+secret 管理を GitHub Actions に寄せない。Cloudflare native build と Wrangler deploy に必要な最小限の secret surface にする。
+
+### Deploy / CI
+
+GitHub Actions に頼らず、まずは Cloudflare Workers Builds / Git integration を使う。
+
+- default deploy: Cloudflare Workers Builds
+- manual deploy: `wrangler deploy`
+- staged deploy: `wrangler versions upload` + `wrangler versions deploy`
+- local validation: `npm run check`
+- later: typecheck / lint / migration dry-run / smoke test を追加する
+
+Cloudflare native builds で不足する要件が見えた場合だけ、別 SaaS CI を検討する。
+
 ## Alternatives considered
+
+### Cloudflare Pages
+
+静的 frontend + lightweight Functions ならよい。ただし Hono RPC、D1、R2、auth、admin workflow を app boundary の中心に置くなら Workers のほうが自然。
+
+### Next.js + Supabase + Vercel
+
+relational workflow と preview deploy は強い。ただし今回の方針では Cloudflare hosting / D1 / R2 / Wrangler を優先し、GitHub Actions 依存も減らしたい。Cloudflare platform に寄せるほうが一貫性が高い。
 
 ### Keep Vanilla JS + Node Server
 
 prototype にはよい。ただし persistent plans、admin auth、proposal review、relational data が入ると保守コストが高くなる。
 
-### Vite SPA + Supabase Direct Client
+### Vite SPA + D1 direct-ish API
 
-構築は速いが、初日から browser-facing RLS に permission logic を寄せすぎる。Fes Route は admin / proposal workflow があるので、server-side boundary を持つ価値がある。
+構築は速いが、API contract と validation が散らばりやすい。Hono RPC を入れて server route を canonical contract にする。
 
 ### Rails / Laravel
 
-admin CRUD と relational data には強いが、mobile-first timetable UI を頻繁に磨く段階ではやや重い。
-
-### Cloudflare Workers + D1
-
-edge cost と simple hosting は魅力。ただしこの product では edge-first runtime constraints より、Postgres、storage、auth、成熟した relational workflow の恩恵が大きい。
+admin CRUD と relational data には強いが、Cloudflare-first hosting と mobile-first frontend iteration の前提から外れる。
 
 ## Phasing
 
-### Phase 1: Durable MVP
+### Phase 1: Cloudflare foundation
 
-- prototype を Next.js + TypeScript に移す
-- events、stages、artists、timetable entries、plans、sources の Drizzle schema を追加
-- Supabase project と migrations を追加
-- public event page、personal route planner、share page を実装
+- prototype を React + Vite + TypeScript に移す
+- Workers + Hono の app shell を作る
+- Hono RPC client を frontend に接続する
+- D1 migrations を追加する
+- R2 binding と source attachment model を追加する
+- Better Auth の admin login boundary を作る
+
+### Phase 2: Durable MVP
+
+- events、stages、artists、timetable entries、plans、sources の schema を固める
+- public event page、personal route planner、share page を実装する
 - admin input は basic でよいが persistent にする
+- Cloudflare Workers Builds で deploy する
 
-### Phase 2: Group and proposals
+### Phase 3: Group and proposals
 
-- group invitations と member display names を追加
-- group comparison views を追加
-- user-submitted event / timetable proposals を追加
-- admin proposal review queue を追加
+- group invitations と member display names を追加する
+- group comparison views を追加する
+- user-submitted event / timetable proposals を追加する
+- admin proposal review queue を追加する
 
-### Phase 3: Import Assist
+### Phase 4: Import Assist / CMS
 
-- ticket-site / official-site URL import adapters を追加
-- source images / PDFs の attachment storage を追加
-- duplicate candidate review を追加
-- manual fetch が不安定になった場合だけ queue / scheduled refresh を追加
+- ticket-site / official-site URL import adapters を追加する
+- source images / PDFs の attachment storage を追加する
+- duplicate candidate review を追加する
+- Payload CMS の admin runtime と integration を検証する
+- manual fetch が不安定になった場合だけ queue / scheduled refresh を追加する
 
 ## Revisit triggers
 
 次の条件が出たら技術選定を見直す。
 
+- D1 の query / migration / size limits が product growth を邪魔する
+- Payload CMS runtime を別 deploy unit にしても運用が重い
 - offline use が hard requirement になる
 - import jobs が app runtime の中心になる
 - native push notifications が必要になる
-- database cost / limits が見える
 - 複数の non-web clients が versioned API を必要とする
 
 ## References
 
-- Next.js App Router: https://nextjs.org/docs/app
-- Next.js backend-for-frontend guide: https://nextjs.org/docs/app/guides/backend-for-frontend
-- Supabase Row Level Security: https://supabase.com/docs/guides/database/postgres/row-level-security
-- Drizzle migrations: https://orm.drizzle.team/docs/migrations
-- Vercel deployments: https://vercel.com/docs/deployments/deployment-methods
+- Cloudflare Wrangler: https://developers.cloudflare.com/workers/wrangler/
+- Cloudflare Workers Static Assets: https://developers.cloudflare.com/workers/static-assets/
+- Cloudflare Workers Builds: https://developers.cloudflare.com/workers/ci-cd/builds/
+- Cloudflare Workers GitHub integration: https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/
+- Cloudflare Workers versions and deployments: https://developers.cloudflare.com/workers/configuration/versions-and-deployments/
+- Hono Stacks: https://hono.dev/docs/concepts/stacks
