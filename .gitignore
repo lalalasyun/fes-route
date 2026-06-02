@@ -6,3 +6,6 @@ dist/
 build/
 coverage/
 .tmp/
+.symphony/
+.symphony-run/
+worktrees/

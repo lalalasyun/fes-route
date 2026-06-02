@@ -53,4 +53,4 @@ npm run dev
 - `docs/screens.md` — 画面仕様
 - `docs/design-spec.md` — デザイン起点の詳細仕様
 - `docs/backlog.md` — 次の打ち手
-- `docs/symphony-guide.md` — Symphony / GitHub Projects runner 運用
+- `docs/symphony-guide.md` — Symphony / Linear / Codex app-server runner 運用

@@ -21,6 +21,8 @@ Commands:
   logs      Tail the persisted log file
 
 Environment:
+  LINEAR_API_KEY            Required. Linear API key passed to Symphony
+  CODEX_HOME                Optional. Defaults to /home/openclaw/.codex
   SYMPHONY_WORKSPACE_ROOT   Required. Workspace root passed to run-symphony.sh
   SYMPHONY_WORKFLOW_PATH    Optional. Defaults to WORKFLOW.md in repo root
   SYMPHONY_TMUX_SESSION     Optional. Defaults to 'symphony'
@@ -42,6 +44,13 @@ require_workspace_root() {
   fi
 }
 
+require_linear_key() {
+  if [[ -z "${LINEAR_API_KEY:-}" ]]; then
+    echo "LINEAR_API_KEY を設定してください" >&2
+    exit 1
+  fi
+}
+
 session_exists() {
   tmux has-session -t "$SESSION_NAME" 2>/dev/null
 }
@@ -52,9 +61,8 @@ runner_command() {
     args=("$@")
   fi
 
-  local escaped_root escaped_workspace escaped_workflow escaped_runner escaped_log
+  local escaped_root escaped_workflow escaped_runner escaped_log
   printf -v escaped_root '%q' "$ROOT"
-  printf -v escaped_workspace '%q' "$SYMPHONY_WORKSPACE_ROOT"
   printf -v escaped_workflow '%q' "$WORKFLOW_PATH"
   printf -v escaped_runner '%q' "$RUNNER_SCRIPT"
   printf -v escaped_log '%q' "$LOG_FILE"
@@ -64,12 +72,13 @@ runner_command() {
     printf -v joined_args ' %q' "${args[@]}"
   fi
 
-  printf 'cd %s && mkdir -p %q && export CODEX_HOME=/home/openclaw/.codex SYMPHONY_WORKSPACE_ROOT=%s SYMPHONY_WORKFLOW_PATH=%s && exec %s%s 2>&1 | tee -a %s' \
-    "$escaped_root" "$LOG_DIR" "$escaped_workspace" "$escaped_workflow" "$escaped_runner" "$joined_args" "$escaped_log"
+  printf 'cd %s && mkdir -p %q && export SYMPHONY_WORKFLOW_PATH=%s && exec %s%s 2>&1 | tee -a %s' \
+    "$escaped_root" "$LOG_DIR" "$escaped_workflow" "$escaped_runner" "$joined_args" "$escaped_log"
 }
 
 start_session() {
   require_workspace_root
+  require_linear_key
   mkdir -p "$LOG_DIR"
   touch "$LOG_FILE"
 
@@ -81,7 +90,11 @@ start_session() {
   local command escaped_command
   command="$(runner_command "$@")"
   printf -v escaped_command '%q' "$command"
-  tmux new-session -d -s "$SESSION_NAME" "bash -lc $escaped_command"
+  tmux new-session -d -s "$SESSION_NAME" \
+    -e "LINEAR_API_KEY=$LINEAR_API_KEY" \
+    -e "CODEX_HOME=${CODEX_HOME:-/home/openclaw/.codex}" \
+    -e "SYMPHONY_WORKSPACE_ROOT=$SYMPHONY_WORKSPACE_ROOT" \
+    "bash -lc $escaped_command"
   tmux set-option -t "$SESSION_NAME" remain-on-exit on >/dev/null
   echo "started tmux session: $SESSION_NAME"
   echo "log: $LOG_FILE"
