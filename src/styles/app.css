@@ -292,6 +292,99 @@ h1 { margin: 0 0 12px; font-size: clamp(30px, 5vw, 52px); line-height: 1.05; }
   cursor: pointer;
 }
 .notes { padding-left: 18px; line-height: 1.8; }
+.comparison-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.comparison-summary {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+.comparison-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.comparison-metrics span {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  text-align: center;
+  font-size: 13px;
+}
+.comparison-metrics strong {
+  display: block;
+  color: var(--text);
+  font-size: 18px;
+}
+.comparison-plan-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.comparison-plan-chip {
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 168, 255, .34);
+  background: rgba(139, 168, 255, .10);
+  color: var(--text);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.comparison-plan-chip span {
+  color: var(--muted);
+}
+.comparison-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.comparison-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.025);
+}
+.comparison-item.overlap {
+  border-color: rgba(118, 228, 195, .42);
+  background: rgba(118, 228, 195, .08);
+}
+.comparison-item h3 {
+  margin: 2px 0 4px;
+  line-height: 1.25;
+}
+.comparison-item p,
+.comparison-item-time {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.comparison-name-stack {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.comparison-name-stack span {
+  max-width: 140px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(15, 18, 33, .84);
+  border: 1px solid rgba(255,255,255,.08);
+  color: var(--text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 .toast {
   position: fixed; right: 20px; bottom: 20px; background: #10172c; border: 1px solid var(--line);
   border-radius: 12px; padding: 12px 14px; color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,.25);
@@ -322,6 +415,16 @@ h1 { margin: 0 0 12px; font-size: clamp(30px, 5vw, 52px); line-height: 1.05; }
   .route-item-row {
     flex-direction: column;
     align-items: stretch;
+  }
+  .comparison-metrics,
+  .comparison-item {
+    grid-template-columns: 1fr;
+  }
+  .comparison-name-stack {
+    justify-content: flex-start;
+  }
+  .comparison-name-stack span {
+    max-width: 100%;
   }
   .timeline-board {
     padding: 10px;
