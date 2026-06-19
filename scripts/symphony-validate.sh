@@ -19,6 +19,7 @@ mapfile -t changed_files < <(
 
 run_symphony_compile=false
 run_node_check=false
+changed_shell_scripts=()
 
 for path in "${changed_files[@]:-}"; do
   case "$path" in
@@ -27,6 +28,9 @@ for path in "${changed_files[@]:-}"; do
       ;;
     scripts/github_projects_symphony.py)
       run_symphony_compile=true
+      ;;
+    scripts/*.sh)
+      changed_shell_scripts+=("$path")
       ;;
   esac
 done
@@ -49,7 +53,12 @@ if $run_symphony_compile; then
   python3 -m py_compile scripts/github_projects_symphony.py
 fi
 
-if ! $run_node_check && ! $run_symphony_compile; then
+if ((${#changed_shell_scripts[@]} > 0)); then
+  echo "==> bash -n changed shell scripts"
+  bash -n "${changed_shell_scripts[@]}"
+fi
+
+if ! $run_node_check && ! $run_symphony_compile && ((${#changed_shell_scripts[@]} == 0)); then
   echo "==> 追加の repo-specific validation は不要 (docs / skills / workflow 変更のみ)"
 fi
 

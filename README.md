@@ -52,4 +52,12 @@ npm run dev
 - `docs/screens.md` — 画面仕様
 - `docs/design-spec.md` — デザイン起点の詳細仕様
 - `docs/backlog.md` — 次の打ち手
-- `docs/symphony-guide.md` — Symphony / GitHub Projects runner 運用
+- `docs/symphony-guide.md` — Hermes / agent delegation と GitHub Projects runner 運用
+
+## Development operations
+
+通常の coding task は OpenClaw が repo を直接編集せず、Hermes から `agent`
+ユーザーへ委譲する。`agent` は `/home/agent/workspace/fes-route` で branch
+作成、validation、commit、push、PR 作成または更新まで進める。
+
+詳細は `docs/symphony-guide.md` を参照。

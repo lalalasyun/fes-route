@@ -5,6 +5,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORKFLOW_PATH="${SYMPHONY_WORKFLOW_PATH:-$ROOT/WORKFLOW.md}"
 PYTHON_RUNNER="$ROOT/scripts/github_projects_symphony.py"
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
+  exec python3 "$PYTHON_RUNNER" --help
+fi
+
 if ! command -v git >/dev/null 2>&1; then
   echo "git が必要です" >&2
   exit 1

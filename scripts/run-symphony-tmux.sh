@@ -25,6 +25,7 @@ Environment:
   SYMPHONY_WORKFLOW_PATH    Optional. Defaults to WORKFLOW.md in repo root
   SYMPHONY_TMUX_SESSION     Optional. Defaults to 'symphony'
   SYMPHONY_TMUX_LOG_DIR     Optional. Defaults to .symphony/tmux in repo root
+  CODEX_HOME                Optional. If unset, codex uses the agent user's default
 EOF
 }
 
@@ -64,7 +65,7 @@ runner_command() {
     printf -v joined_args ' %q' "${args[@]}"
   fi
 
-  printf 'cd %s && mkdir -p %q && export CODEX_HOME=/home/openclaw/.codex SYMPHONY_WORKSPACE_ROOT=%s SYMPHONY_WORKFLOW_PATH=%s && exec %s%s 2>&1 | tee -a %s' \
+  printf 'cd %s && mkdir -p %q && export SYMPHONY_WORKSPACE_ROOT=%s SYMPHONY_WORKFLOW_PATH=%s && exec %s%s 2>&1 | tee -a %s' \
     "$escaped_root" "$LOG_DIR" "$escaped_workspace" "$escaped_workflow" "$escaped_runner" "$joined_args" "$escaped_log"
 }
 
@@ -138,14 +139,21 @@ logs_session() {
 }
 
 main() {
-  require_tmux
-
   local command="${1:-}"
   if [[ -z "$command" ]]; then
     usage
     exit 1
   fi
   shift || true
+
+  case "$command" in
+    -h|--help|help)
+      usage
+      exit 0
+      ;;
+  esac
+
+  require_tmux
 
   local runner_args=()
   if (($# > 0)); then
@@ -176,9 +184,6 @@ main() {
       ;;
     logs)
       logs_session
-      ;;
-    -h|--help|help)
-      usage
       ;;
     *)
       echo "unknown command: $command" >&2
