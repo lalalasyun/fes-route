@@ -13,6 +13,51 @@ lightweight full-stack TypeScript app** を第一候補にする。ただし現�
 決定ではなく、frontend / backend / database / auth / deployment / import worker を
 揃えるための技術仮説として扱う。
 
+## Decision framing
+
+### Decide now
+
+今すぐ固定する前提:
+
+- Prototype runtime は vanilla JS + static assets + local Node server のまま維持する。
+- 本実装の第一候補は React + Vite + TypeScript / Cloudflare Workers Static Assets / Hono / D1 / R2 とする。
+- attendee flow はログインなしを維持する。public event browsing, local plan editing, share URL, group invite は anonymous-first にする。
+- admin flow は auth 必須にする。event / timetable mutation, proposal review, duplicate merge, import helper execution は admin boundary の内側に置く。
+- Admin surface は lightweight custom admin first とする。Payload CMS は後回しの代替案に留める。
+- Ticket-site import は operator-triggered / manual review から始める。自動巡回 crawler は MVP 外。
+- GitHub Issue + Hermes/agent delegation を現在の repo 作業単位にする。OpenClaw-owned repo runner 前提は復活させない。
+
+### Validate with spikes
+
+実装前または durable foundation の最初に spike で潰す項目:
+
+- Cloudflare Workers Static Assets + Hono + Vite build の repo 構成。
+- D1 migrations と local/remote 環境の扱い。特に canonical event / timetable / user plan の基本 CRUD と unique constraints。
+- R2 binding と source attachment 保存。PDF / image / screenshot を event source に紐づける最小 API。
+- Better Auth を admin-only boundary として使う場合の Workers / D1 互換性、session 管理、local dev 手順。
+- Hono RPC (`hc`) または同等の typed client が agent-driven implementation で過剰にならないか。
+- Share ID 発行、保存期間、bearer URL としての扱い、hash-only URL からの移行導線。
+- Ticketing source adapter の最小 contract と、1サイトだけで fetch / normalize / warning / manual review が回るか。
+
+Spike は production migration を目的にせず、repo に残す成果物を次のどれかに絞る。
+
+- 短い ADR または docs 追記
+- small proof branch / PR
+- migration skeleton
+- failing constraints or rejected alternative の記録
+
+### Defer
+
+今は決めない / 入れない項目:
+
+- attendee account signup, social login, friend graph
+- realtime location sharing, chat, live notification
+- fully automated crawling, scheduled refresh, queue orchestration
+- Payload CMS adoption
+- Postgres / Supabase migration
+- native app, multi-client API versioning
+- advanced recommendation, playlist generation, cross-event history
+
 ## Recommended stack hypothesis
 
 - frontend: React + Vite + TypeScript
@@ -158,16 +203,16 @@ after manual import assistance proves valuable and rate-limit behavior is unders
 Repo work is tracked through GitHub Issues / PRs and delegated through Hermes to the
 `agent` workspace. OpenClaw is the Discord intake / bridge, not the repo editor.
 
-This decision intentionally does not adopt the older Linear Project `main`,
-`LINEAR_API_KEY`, OpenAI Symphony binary, or OpenClaw-owned `CODEX_HOME` runner
-direction from PR #18 / Issue #19. The current workflow remains:
+This decision intentionally does not adopt the older external tracker token,
+standalone repo polling runner, or OpenClaw-owned `CODEX_HOME` direction from
+PR #18 / Issue #19. The current workflow remains:
 
 - GitHub Issue is the product / engineering work item.
 - Hermes Kanban task delegates coding to `agent`.
 - `agent` works under `/home/agent/workspace/fes-route`.
 - Validation, commit, push, and PR creation happen from the repo workspace.
-- `WORKFLOW.md`, `docs/symphony-guide.md`, and `scripts/symphony-validate.sh`
-  define the repo-local contract.
+- `WORKFLOW.md`, `docs/hermes-agent-workflow.md`, and
+  `scripts/validate-workflow.sh` define the repo-local contract.
 
 ## Alternatives considered
 
@@ -193,7 +238,7 @@ Useful if editorial workflows become the largest problem. For the MVP, a small c
 admin and review queue is likely cheaper to ship. Payload remains a later candidate
 rather than a first implementation dependency.
 
-### Linear / Symphony runner migration
+### External tracker runner migration
 
 Not adopted. It conflicts with the current GitHub Issue + Hermes/agent delegation
 workflow and would move repo work back toward older runner assumptions.

@@ -54,7 +54,7 @@ npm run dev
 - `docs/screens.md` — 画面仕様
 - `docs/design-spec.md` — デザイン起点の詳細仕様
 - `docs/backlog.md` — 次の打ち手
-- `docs/symphony-guide.md` — Hermes / agent delegation と GitHub Projects runner 運用
+- `docs/hermes-agent-workflow.md` — Hermes / agent delegation 運用
 
 ## Development operations
 
@@ -62,4 +62,4 @@ npm run dev
 ユーザーへ委譲する。`agent` は `/home/agent/workspace/fes-route` で branch
 作成、validation、commit、push、PR 作成または更新まで進める。
 
-詳細は `docs/symphony-guide.md` を参照。
+詳細は `docs/hermes-agent-workflow.md` を参照。

@@ -1,38 +1,8 @@
----
-tracker:
-  kind: github
-  repo: lalalasyun/fes-route
-  project_number: 8
-  status_field: Status
-  active_states:
-    - Todo
-    - Pending
-    - In Progress
-  terminal_states:
-    - Done
-workspace:
-  root: /home/agent/workspace/fes-route-runs
-hooks:
-  after_create: |
-    git clone https://github.com/lalalasyun/fes-route.git .
-    git checkout main
-    git checkout -b hermes/issue-$SYMPHONY_ISSUE_NUMBER
-polling:
-  interval_ms: 30000
-agent:
-  max_concurrent_agents: 1
-codex:
-  model: gpt-5.4
-  approval_policy: never
-  thread_sandbox: danger-full-access
----
-You are working in the Fes Route repo for GitHub Issue {{issue.identifier}}.
+# Fes Route Workflow
 
-Issue: {{issue.title}}
-URL: {{issue.url}}
-Labels: {{issue.labels}}
-
-Use the repository-local instructions and skills.
+This repo uses GitHub repo-first work tracking with Hermes/agent delegation.
+OpenClaw is the Discord intake / bridge only. It does not edit this repo or run
+Codex for repo work from an OpenClaw workspace.
 
 Operational contract:
 
@@ -40,11 +10,11 @@ Operational contract:
   OpenClaw workspace, and do not read or copy OpenClaw credentials, sessions,
   auth profiles, or private workspace paths into repo artifacts.
 - Hermes delegates coding tasks to the `agent` user. The normal checkout is
-  `/home/agent/workspace/fes-route`; runner-created workspaces must also be
-  agent-owned and stay under `/home/agent/workspace`.
+  `/home/agent/workspace/fes-route`.
 - Before editing, read repo instructions (`AGENTS.md`, `CLAUDE.md`, docs, and
   validation scripts when present) and run `git status --short --branch`.
-- Create a branch from `main`; never commit directly to `main`.
+- Create a branch from `main`; never commit directly to `main`. When updating an
+  existing PR, use that PR's head branch.
 - Keep changes scoped to the issue. For code / docs / config changes, run the
   repo validation gate, commit, push, and create or update a PR.
 - PR bodies must include Summary, What changed, Validation, and
@@ -54,6 +24,11 @@ Operational contract:
 - Final `result.md` must include run_id, workspace, branch, PR URL, validation
   run, and residual risks.
 
-Issue body:
+Validation gate:
 
-{{issue.description}}
+```bash
+./scripts/validate-workflow.sh
+```
+
+For this repo, coding tasks should be traceable across the originating Discord
+thread, GitHub Issue, Hermes Kanban task, and PR.

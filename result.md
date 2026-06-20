@@ -1,21 +1,31 @@
 # Hermes agent result
 
-- run_id: `t_273ff955`
+- run_id: `t_f62f2226`
 - workspace: `/home/agent/workspace/fes-route`
-- branch: `docs/issue-17-technology-selection`
-- PR: https://github.com/lalalasyun/fes-route/pull/25
+- branch: `docs/issue-26-requirements-review`
+- PR: https://github.com/lalalasyun/fes-route/pull/33
+- source issue: https://github.com/lalalasyun/fes-route/issues/34
+
+## Summary
+
+- Replaced old runner-oriented workflow docs with the current GitHub repo-first
+  Hermes/agent delegation contract.
+- Removed repo-local polling runner assets and renamed the validation gate to
+  `./scripts/validate-workflow.sh`.
+- Updated README, WORKFLOW, technology-selection notes, PR template, and
+  repo-local skills to match the current operating model.
 
 ## Validation
 
 - `npm run check` - passed
-- `git diff --check && git diff --cached --check` - passed
-- `./scripts/symphony-validate.sh` - passed
+- `git diff --check` - passed
+- `bash -n scripts/validate-workflow.sh` - passed
+- `./scripts/validate-workflow.sh` - passed
+- legacy workflow-name stale-reference scan - passed with no matches
 
 ## Residual risks / follow-ups
 
-- PR #18 should be closed as superseded by this fresh branch once this PR lands.
-  Suggested comment: `Superseded by the fresh Hermes-aligned technology selection PR. The useful technology-selection docs were reintroduced without the stale Linear/Symphony runner changes, so this conflicting PR can be closed.`
-- Issue #19 should be closed as obsolete / not planned. Suggested comment:
-  `Obsolete under the current GitHub Issue + Hermes/agent delegation workflow. We are intentionally not switching WORKFLOW.md or runner scripts back to the Linear main / Codex app-server assumptions.`
-- Technology choices are documented as hypotheses for the durable MVP; the current
-  vanilla JS/static-first prototype remains unchanged.
+- No residual implementation risk identified for the docs/script rewrite.
+- Future workflow automation should stay aligned with GitHub Issue / PR tracking
+  and Hermes/agent delegation, without reintroducing repo-local polling runners
+  or OpenClaw-owned execution state.

@@ -17,20 +17,18 @@ mapfile -t changed_files < <(
   } | awk 'NF' | sort -u
 )
 
-run_symphony_compile=false
 run_node_check=false
 changed_shell_scripts=()
 
 for path in "${changed_files[@]:-}"; do
   case "$path" in
-    src/*|server.mjs|package.json|app/*)
+    src/*|server.mjs|package.json|package-lock.json|app/*)
       run_node_check=true
       ;;
-    scripts/github_projects_symphony.py)
-      run_symphony_compile=true
-      ;;
     scripts/*.sh)
-      changed_shell_scripts+=("$path")
+      if [[ -f "$path" ]]; then
+        changed_shell_scripts+=("$path")
+      fi
       ;;
   esac
 done
@@ -48,18 +46,13 @@ if $run_node_check; then
   npm run check
 fi
 
-if $run_symphony_compile; then
-  echo "==> python3 -m py_compile scripts/github_projects_symphony.py"
-  python3 -m py_compile scripts/github_projects_symphony.py
-fi
-
 if ((${#changed_shell_scripts[@]} > 0)); then
   echo "==> bash -n changed shell scripts"
   bash -n "${changed_shell_scripts[@]}"
 fi
 
-if ! $run_node_check && ! $run_symphony_compile && ((${#changed_shell_scripts[@]} == 0)); then
+if ! $run_node_check && ((${#changed_shell_scripts[@]} == 0)); then
   echo "==> 追加の repo-specific validation は不要 (docs / skills / workflow 変更のみ)"
 fi
 
-echo "Symphony validation OK"
+echo "Workflow validation OK"

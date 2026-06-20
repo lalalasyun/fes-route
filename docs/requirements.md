@@ -22,6 +22,75 @@ Fes Route は、音楽フェスやサーキットイベントの参加者が、1
 - 位置情報共有は扱わない。
 - スマホ web を主導線にする。
 
+## MVP phasing review
+
+Issue #26 時点のレビュー結論:
+
+- 参加者向けの価値は「個人タイテ管理」だけでなく、友人と複数人でどう回るか、移動・衝突・合流をどう判断するかに置く。
+- 現 prototype は hash-only share と static sample data で UX 検証に向いている。すぐ runtime migration せず、route sidebar / mobile route tray / shared view / movement and conflict display を固める。
+- Durable MVP では hash-only share から `shareId` に移行する。共有された plan をサーバーで解決できる段階で、share URL は opaque `shareId` を持つ public bearer URL にする。
+- attendee はログインなし、admin は auth 必須で矛盾しない。境界は「canonical data を変える操作」「import helper 実行」「proposal review」を admin-only に置くことで切る。
+- チケットサイト import helper は operator-triggered / manual review から始める。取得結果を直接 canonical data に反映しない。
+
+### Prototype hardening MVP
+
+Durable persistence に入る前に、現在の vanilla prototype で固める範囲:
+
+- desktop route sidebar を timeline stepper として読みやすくする。
+- mobile route tray を追加し、選択数 / 移動時間 / 衝突状態 / 共有 action を常時追えるようにする。
+- stage distance matrix と fallback movement time を入れる。
+- conflict alert に「どの予定と重なるか」を表示する。
+- shared view を「友人のプラン閲覧」向けに整理する。
+- Standard theme tokens と stage color tokens を UI に適用する。
+
+この段階の共有 URL は hash-only のままでよい。`plan` / `theme` / selected slot ids を URL に持たせ、保存や期限管理はしない。
+
+### Durable foundation
+
+Prototype UX が次の実装に耐える形になったら、durable foundation に進む。
+
+- React + Vite + TypeScript の app structure を作る。
+- Cloudflare Workers Static Assets + Hono の public/admin API boundary を作る。
+- D1 migration skeleton を追加し、events / artists / stages / timetable_entries / user_plans / plan_entries / event_sources / event_proposals を作る。
+- R2 binding を source attachments 用に追加する。
+- Admin-only auth boundary を追加する。Better Auth は candidate として spike で確認し、重ければ lightweight custom admin auth から始める。
+- `shareId` 発行 API を追加し、hash-only plan から server-persisted plan へ移行できるようにする。
+
+この段階で public attendee read/write は anonymous-first、admin mutation は auth-required に分ける。
+
+### Durable MVP
+
+Durable foundation の上で成立させる MVP:
+
+- canonical event / timetable を public API から閲覧できる。
+- ログインなしで個人予定を作り、`shareId` URL で共有できる。
+- グループ invite link から表示名だけで参加し、複数人の予定比較ができる。
+- admin は event / timetable を手動作成・編集・公開できる。
+- user proposal は pending / accepted / rejected として保存され、admin review 後に canonical data へ反映される。
+- duplicate candidate は event 作成・proposal review 時に提示される。
+- import helper は admin が URL を入力し、取得候補を確認してから保存する。
+
+### Later
+
+- attendee login / cross-device account linking
+- scheduled import refresh and queues
+- full crawler
+- realtime chat / location
+- advanced recommendation / playlists
+- native apps
+
+### Recommended next step
+
+次の実装は **prototype UX hardening first** を推奨する。
+
+理由:
+
+- 現在の product value は route planning / sharing / group comparison の体験品質に依存している。
+- Durable foundation を先に作ると、未確定の UI state を API / schema に固定しやすい。
+- shareId 移行、D1 schema、admin auth は必要だが、route item / movement / conflict / shared view の形が固まってからの方が手戻りが少ない。
+
+ただし prototype hardening と並行して、Cloudflare + D1 + R2 + admin auth の spike Issue は先に切る。
+
 ## ユーザー種別
 
 ### フェス参加者
