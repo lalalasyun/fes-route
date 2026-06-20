@@ -1,24 +1,21 @@
 # Hermes agent result
 
-- run_id: `t_c4b138d6`
+- run_id: `t_273ff955`
 - workspace: `/home/agent/workspace/fes-route`
-- branch: `feat/issue-23-responsive-shell`
-- PR: https://github.com/lalalasyun/fes-route/pull/24
+- branch: `docs/issue-17-technology-selection`
+- PR: pending
 
 ## Validation
 
 - `npm run check` - passed
-- `git diff --check` - passed
+- `git diff --check && git diff --cached --check` - passed
 - `./scripts/symphony-validate.sh` - passed
-- Local app inspection - passed with Chromium screenshots at desktop 1366x900
-  and mobile 390x844, including expanded mobile route tray via DevTools
-  Protocol.
 
 ## Residual risks / follow-ups
 
-- Mobile route tray is an MVP shell; richer stage filtering and tray gestures
-  remain follow-up work.
-- Move time total uses the documented fallback model for now: same stage = 0
-  minutes, different stage = 5 minutes until a stage distance matrix lands.
-- Headless Chromium in this environment lacks Japanese fonts, so screenshot text
-  showed tofu glyphs even though layout and controls rendered.
+- PR #18 should be closed as superseded by this fresh branch once this PR lands.
+  Suggested comment: `Superseded by the fresh Hermes-aligned technology selection PR. The useful technology-selection docs were reintroduced without the stale Linear/Symphony runner changes, so this conflicting PR can be closed.`
+- Issue #19 should be closed as obsolete / not planned. Suggested comment:
+  `Obsolete under the current GitHub Issue + Hermes/agent delegation workflow. We are intentionally not switching WORKFLOW.md or runner scripts back to the Linear main / Codex app-server assumptions.`
+- Technology choices are documented as hypotheses for the durable MVP; the current
+  vanilla JS/static-first prototype remains unchanged.

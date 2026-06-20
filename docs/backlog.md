@@ -17,6 +17,7 @@
 - [ ] theme switcher UI を追加する
 - [ ] Pop / Rock token を実装する
 - [ ] 要件定義を実装 Issue に分解する
+- [ ] `docs/technology-selection.md` の Phase 1 に沿って durable foundation の実装 Issue を分解する
 - [ ] canonical event / timetable のデータモデルを決める
 - [ ] 管理サイドの手動イベント入力 UI を設計する
 - [ ] 管理サイドのタイムテーブル入力 UI を設計する
@@ -28,6 +29,9 @@
 - [ ] 共有URLの最小仕様を決める
 
 ## Later
+- [ ] Cloudflare Workers / Hono / D1 / R2 の spike を作る
+- [ ] admin auth candidate として Better Auth を検証する
+- [ ] Cloudflare Workers Builds / Wrangler deploy path を検証する
 - [ ] チケットサイトごとの import adapter
 - [ ] 公式サイト / X 由来のタイムテーブル登録補助
 - [ ] ユーザー投稿のレート制限
