@@ -1,23 +1,46 @@
-# Symphony 導入ガイド
+# Hermes / agent delegation 運用ガイド
 
-`fes-route` を **GitHub Issues + GitHub Projects v2 ベース** で Symphony 的に回すための導入メモ。
+`fes-route` の開発運用を **GitHub repo-first + Hermes/agent delegation**
+で回すためのメモ。OpenClaw は Discord の入口だけを担当し、repo 編集は
+Hermes から委譲された `agent` が `/home/agent/workspace/fes-route` で行う。
 
 ## この repo に追加したもの
 
 - `WORKFLOW.md`
-  - repo 専用の Symphony workflow contract
+  - repo 専用の Hermes/agent workflow contract
 - `.codex/skills/`
-  - Symphony から参照する repo-local skills (`github_project`, `commit`, `pull`, `push`, `land`)
+  - Hermes/agent が参照する repo-local skills (`github_project`, `commit`, `pull`, `push`, `land`)
 - `scripts/github_projects_symphony.py`
-  - GitHub Projects v2 を poll して Codex を起動する repo-native runner
+  - GitHub Projects v2 を poll して Codex を起動する任意の repo-native runner
 - `scripts/run-symphony.sh`
   - 上記 Python runner を起動する薄いラッパー
 - `scripts/run-symphony-tmux.sh`
-  - tmux で Symphony runner を start / stop / status / attach / logs する運用ラッパー
+  - tmux で runner を start / stop / status / attach / logs する運用ラッパー
 - `scripts/symphony-validate.sh`
   - この repo での最低 validation gate
 - `.github/pull_request_template.md`
-  - Symphony が PR body を埋めやすい最小テンプレート
+  - agent が PR body を埋めやすい最小テンプレート
+
+## 現在の標準フロー
+
+Discord thread / forum で依頼を受けたら、OpenClaw は Issue と Hermes
+Kanban task を作り、coding task を Hermes/agent に渡す。OpenClaw 側では
+repo を編集しない。
+
+Hermes/agent 側の標準手順:
+
+1. `/home/agent/workspace/fes-route` で作業する。
+2. 編集前に `AGENTS.md`, `CLAUDE.md`, 関連 docs, validation scripts を確認し、
+   `git status --short --branch` を実行する。
+3. `main` から issue / task 用の branch を作る。
+4. 依頼範囲の code / docs / config を変更する。
+5. repo validation を実行する。
+6. commit, push, PR 作成または更新まで進める。
+7. PR body に Summary / What changed / Validation / Risks or follow-ups を書く。
+8. `result.md` に run_id, workspace, branch, PR URL, validation, 残リスクを残す。
+
+この flow では `LINEAR_API_KEY` は不要。Linear / OpenAI Symphony 参照実装
+そのものではなく、GitHub Issue / PR / Hermes Kanban task を追跡単位にする。
 
 ## 前提
 
@@ -26,9 +49,13 @@
 - `gh` (GitHub CLI)
 - `codex`
 
-## GitHub Projects 側で必要なもの
+通常の Hermes delegation では、上記が agent workspace にあることを前提にする。
 
-Symphony 的な tracker として **GitHub Projects v2** を使う。
+## GitHub Projects runner を使う場合
+
+この repo には、GitHub Projects v2 を tracker として Codex を起動する
+任意 runner も残している。これは標準の Hermes delegation を置き換えるものではなく、
+GitHub Project から候補 Issue を自動取得したい場合の補助。
 
 現在の `WORKFLOW.md` は以下を前提にしている。
 
@@ -45,10 +72,10 @@ Symphony 的な tracker として **GitHub Projects v2** を使う。
 
 ## 環境変数
 
-最低限これを設定する。
+runner を使う場合は最低限これを設定する。
 
 ```bash
-export SYMPHONY_WORKSPACE_ROOT="$HOME/code/fes-route-symphony"
+export SYMPHONY_WORKSPACE_ROOT="/home/agent/workspace/fes-route-runs"
 ```
 
 任意:
@@ -58,6 +85,7 @@ export SYMPHONY_WORKFLOW_PATH="$PWD/WORKFLOW.md"
 ```
 
 `gh auth status` が通ることが前提。追加の API token 環境変数は不要。
+`CODEX_HOME` は runner から強制しない。agent ユーザーの通常環境を使う。
 
 ## 起動
 
@@ -85,7 +113,7 @@ repo root で:
 まず workspace root を設定する。
 
 ```bash
-export SYMPHONY_WORKSPACE_ROOT="$HOME/code/fes-route-symphony"
+export SYMPHONY_WORKSPACE_ROOT="/home/agent/workspace/fes-route-runs"
 ```
 
 起動 / 確認 / 接続 / 停止:
@@ -122,7 +150,7 @@ live E2E の確認では、対象 workspace 配下の `.symphony-run/` も見る
 
 ## Validation 方針
 
-Symphony からの push 前 gate は:
+Hermes/agent からの push 前 gate は:
 
 ```bash
 ./scripts/symphony-validate.sh
@@ -130,17 +158,49 @@ Symphony からの push 前 gate は:
 
 変更内容に応じて以下を自動実行する。
 
-- app / server 変更 → `npm run check`
+- app / server 変更 -> `npm run check`
 - `scripts/github_projects_symphony.py` 変更 → `python3 -m py_compile scripts/github_projects_symphony.py`
 
 docs / workflow / skills 変更のみなら `git diff --check` を主 gate にする。
+shell script を変更した場合は、対象 script に `bash -n` を追加で実行する。
+
+今回の運用 docs / runner scripts 変更では、少なくとも以下を実行する。
+
+```bash
+npm run check
+git diff --check
+bash -n scripts/*.sh
+./scripts/symphony-validate.sh
+./scripts/run-symphony.sh --help
+./scripts/run-symphony-tmux.sh help
+```
 
 ## 運用メモ
 
 - この導入は **OpenAI の Linear 参照実装そのまま** ではない。
 - `fes-route` 向けに、**GitHub Issues / Projects v2 を control plane にする repo-native runner** を持つ。
 - repo 側では `WORKFLOW.md`, repo-local skills, validation gate, runner を version 管理する。
-- 発想は Symphony だが、tracker adapter は GitHub に寄せている。
+- 発想は Symphony だが、tracker adapter と実作業は GitHub repo-first +
+  Hermes/agent delegation に寄せている。
+- OpenClaw workspace, credentials, sessions, auth profiles は repo 運用フローに
+  持ち込まない。
+
+## PR #18 の扱い
+
+PR #18 (`docs: 技術選定を追加`) には、Cloudflare Workers / Hono / D1 / R2
+などの技術選定 docs が含まれており、プロダクト方針としては有用な部分がある。
+
+一方で、同じ PR には Linear Project `main`, `LINEAR_API_KEY`,
+OpenAI Symphony binary, OpenClaw 固有の `CODEX_HOME` などの runner 運用前提も
+含まれている。これは現在の
+GitHub repo-first + Hermes/agent delegation 方針と衝突する。
+
+そのため、PR #18 はそのまま merge せず、以下のどちらかで扱う。
+
+- 技術選定 docs だけを別PRとして取り込み、runner / workflow 変更はこの方針で置き換える。
+- PR #18 を close / supersede し、このIssueのPRを運用フローの正とする。
+
+少なくとも、PR #18 の Linear / OpenClaw runner 前提を blindly merge しない。
 
 ## 注意
 

@@ -11,11 +11,12 @@ tracker:
   terminal_states:
     - Done
 workspace:
-  root: /home/openclaw/code/fes-route-symphony
+  root: /home/agent/workspace/fes-route-runs
 hooks:
   after_create: |
     git clone https://github.com/lalalasyun/fes-route.git .
-    git checkout -b symphony/issue-$SYMPHONY_ISSUE_NUMBER
+    git checkout main
+    git checkout -b hermes/issue-$SYMPHONY_ISSUE_NUMBER
 polling:
   interval_ms: 30000
 agent:
@@ -31,9 +32,27 @@ Issue: {{issue.title}}
 URL: {{issue.url}}
 Labels: {{issue.labels}}
 
-Use the repository-local instructions and skills. Keep the change scoped to this
-issue, run the smallest meaningful validation gate, and leave a clear commit or
-PR-ready state when finished.
+Use the repository-local instructions and skills.
+
+Operational contract:
+
+- OpenClaw is only the Discord intake / bridge. Do not edit this repo from an
+  OpenClaw workspace, and do not read or copy OpenClaw credentials, sessions,
+  auth profiles, or private workspace paths into repo artifacts.
+- Hermes delegates coding tasks to the `agent` user. The normal checkout is
+  `/home/agent/workspace/fes-route`; runner-created workspaces must also be
+  agent-owned and stay under `/home/agent/workspace`.
+- Before editing, read repo instructions (`AGENTS.md`, `CLAUDE.md`, docs, and
+  validation scripts when present) and run `git status --short --branch`.
+- Create a branch from `main`; never commit directly to `main`.
+- Keep changes scoped to the issue. For code / docs / config changes, run the
+  repo validation gate, commit, push, and create or update a PR.
+- PR bodies must include Summary, What changed, Validation, and
+  Risks / follow-ups.
+- If blocked, write the blocker and the minimum confirmation needed to
+  `result.md`.
+- Final `result.md` must include run_id, workspace, branch, PR URL, validation
+  run, and residual risks.
 
 Issue body:
 
