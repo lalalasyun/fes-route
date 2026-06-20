@@ -45,6 +45,14 @@ export const sampleDataModel = {
     { id: `${EVENT_ID}:forest-stage`, eventId: EVENT_ID, name: 'Forest Stage', shortName: 'Forest', sortOrder: 2, createdAt: CREATED_AT, updatedAt: UPDATED_AT },
     { id: `${EVENT_ID}:moon-stage`, eventId: EVENT_ID, name: 'Moon Stage', shortName: 'Moon', sortOrder: 3, createdAt: CREATED_AT, updatedAt: UPDATED_AT },
   ],
+  stageDistances: [
+    { eventId: EVENT_ID, fromStageId: `${EVENT_ID}:ocean-stage`, toStageId: `${EVENT_ID}:forest-stage`, minutes: 6 },
+    { eventId: EVENT_ID, fromStageId: `${EVENT_ID}:forest-stage`, toStageId: `${EVENT_ID}:ocean-stage`, minutes: 6 },
+    { eventId: EVENT_ID, fromStageId: `${EVENT_ID}:forest-stage`, toStageId: `${EVENT_ID}:moon-stage`, minutes: 4 },
+    { eventId: EVENT_ID, fromStageId: `${EVENT_ID}:moon-stage`, toStageId: `${EVENT_ID}:forest-stage`, minutes: 4 },
+    { eventId: EVENT_ID, fromStageId: `${EVENT_ID}:ocean-stage`, toStageId: `${EVENT_ID}:moon-stage`, minutes: 8 },
+    { eventId: EVENT_ID, fromStageId: `${EVENT_ID}:moon-stage`, toStageId: `${EVENT_ID}:ocean-stage`, minutes: 8 },
+  ],
   timetableEntries: [
     { id: `${EVENT_ID}:ocean-stage:luminous-echo:2026-08-22t11:00`, eventId: EVENT_ID, artistId: 'luminous-echo', stageId: `${EVENT_ID}:ocean-stage`, startAt: atLocalTime('2026-08-22', '11:00'), endAt: atLocalTime('2026-08-22', '11:40'), status: 'scheduled', createdAt: CREATED_AT, updatedAt: UPDATED_AT },
     { id: `${EVENT_ID}:forest-stage:neon-harbor:2026-08-22t11:20`, eventId: EVENT_ID, artistId: 'neon-harbor', stageId: `${EVENT_ID}:forest-stage`, startAt: atLocalTime('2026-08-22', '11:20'), endAt: atLocalTime('2026-08-22', '12:00'), status: 'scheduled', createdAt: CREATED_AT, updatedAt: UPDATED_AT },
