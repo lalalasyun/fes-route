@@ -50,6 +50,11 @@
           <span id="command-event-meta" class="muted"></span>
         </div>
         <div class="command-actions">
+          <div id="theme-switcher" class="theme-switcher" aria-label="テーマ">
+            <button type="button" data-theme-value="standard" aria-pressed="true">Standard</button>
+            <button type="button" data-theme-value="pop" aria-pressed="false">Pop</button>
+            <button type="button" data-theme-value="rock" aria-pressed="false">Rock</button>
+          </div>
           <button class="ghost small" type="button" data-coming-soon="アーティスト検索は今後追加します">検索</button>
           <button class="ghost small" type="button" data-coming-soon="ステージ絞り込みは今後追加します">ステージ絞り込み</button>
         </div>
@@ -78,7 +83,7 @@
                 <p class="eyebrow">My Route</p>
                 <h2>あなたの周り順</h2>
               </div>
-              <button class="ghost small" type="button" data-coming-soon="並び替え編集は今後追加します">編集</button>
+              <button id="route-edit-button" class="ghost small" type="button" data-coming-soon="並び替え編集は今後追加します">編集</button>
             </div>
             <div id="route-metrics" class="route-metrics" aria-label="Route summary"></div>
             <p id="route-summary" class="muted">まだ未選択です。</p>

@@ -2,13 +2,25 @@ import { buildSampleFestival, sampleDataModel } from './lib/sample-data.js';
 
 const STORAGE_KEY_PREFIX = 'fes-route:plan:';
 const COMPARISON_STORAGE_KEY_PREFIX = 'fes-route:comparison:';
+const DEFAULT_THEME = 'standard';
+const THEMES = new Set(['pop', 'standard', 'rock']);
+const STAGE_COLORS = [
+  'var(--stage-ocean)',
+  'var(--stage-forest)',
+  'var(--stage-moon)',
+  'var(--stage-sunset)',
+  'var(--stage-lime)',
+  'var(--stage-sky)',
+];
 
 function readHashState() {
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const theme = params.get('theme') ?? DEFAULT_THEME;
   return {
     eventId: params.get('event') ?? '',
     selectedIds: (params.get('plan') ?? '').split(',').filter(Boolean),
     isSharedView: params.get('view') === 'shared',
+    theme: THEMES.has(theme) ? theme : DEFAULT_THEME,
   };
 }
 
@@ -17,10 +29,12 @@ const state = {
   activeEventId: '',
   selectedIds: new Set(),
   isSharedView: false,
+  theme: DEFAULT_THEME,
   comparisonPlans: [],
   isMobileRouteTrayOpen: false,
 };
 
+const layout = document.querySelector('.layout');
 const eventName = document.querySelector('#event-name');
 const eventMeta = document.querySelector('#event-meta');
 const commandEventName = document.querySelector('#command-event-name');
@@ -33,6 +47,7 @@ const routeMetrics = document.querySelector('#route-metrics');
 const routeConflictAlert = document.querySelector('#route-conflict-alert');
 const sharedContext = document.querySelector('#shared-context');
 const openPersonalPlanButton = document.querySelector('#open-personal-plan-button');
+const routeEditButton = document.querySelector('#route-edit-button');
 const shareButton = document.querySelector('#share-button');
 const resetButton = document.querySelector('#reset-button');
 const routeShareButton = document.querySelector('#route-share-button');
@@ -45,6 +60,7 @@ const mobileRouteConflictAlert = document.querySelector('#mobile-route-conflict-
 const mobileRouteList = document.querySelector('#mobile-route-list');
 const mobileShareButton = document.querySelector('#mobile-share-button');
 const mobileResetButton = document.querySelector('#mobile-reset-button');
+const themeSwitcher = document.querySelector('#theme-switcher');
 const eventSwitcher = document.querySelector('#event-switcher');
 const adminPanel = document.querySelector('#admin-panel');
 
@@ -142,6 +158,7 @@ function persistSelectedIds() {
   if (state.isSharedView) {
     params.set('view', 'shared');
   }
+  params.set('theme', state.theme);
   const nextHash = params.toString();
   history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ''}`);
 }
@@ -183,6 +200,7 @@ function hydrateStateFromLocation() {
   const hashState = readHashState();
   const activeEventId = setActiveEventFromState(hashState.eventId);
   state.isSharedView = hashState.isSharedView;
+  state.theme = hashState.theme;
   state.selectedIds = new Set(
     hashState.selectedIds.length > 0 || state.isSharedView
       ? hashState.selectedIds
@@ -207,8 +225,7 @@ function getStageMap() {
 }
 
 function getStageColor(index) {
-  const colors = ['#76e4c3', '#8ba8ff', '#ffb86b', '#f472b6', '#a3e635', '#67e8f9'];
-  return colors[index % colors.length];
+  return STAGE_COLORS[index % STAGE_COLORS.length];
 }
 
 function toMinutes(time) {
@@ -218,6 +235,18 @@ function toMinutes(time) {
 
 function rangesOverlap(left, right) {
   return toMinutes(left.start) < toMinutes(right.end) && toMinutes(right.start) < toMinutes(left.end);
+}
+
+function getConflictPairs(selected) {
+  const pairs = [];
+  selected.forEach((slot, index) => {
+    selected.slice(index + 1).forEach((candidate) => {
+      if (rangesOverlap(slot, candidate)) {
+        pairs.push({ left: slot, right: candidate });
+      }
+    });
+  });
+  return pairs;
 }
 
 function getSelectedSlots() {
@@ -231,13 +260,9 @@ function getSelectedSlots() {
     .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
 
   const conflictIds = new Set();
-  selected.forEach((slot, index) => {
-    selected.slice(index + 1).forEach((candidate) => {
-      if (rangesOverlap(slot, candidate)) {
-        conflictIds.add(slot.id);
-        conflictIds.add(candidate.id);
-      }
-    });
+  getConflictPairs(selected).forEach((pair) => {
+    conflictIds.add(pair.left.id);
+    conflictIds.add(pair.right.id);
   });
 
   return selected.map((slot) => ({ ...slot, conflict: conflictIds.has(slot.id) }));
@@ -245,28 +270,43 @@ function getSelectedSlots() {
 
 function getMoveTimeBetween(left, right) {
   if (!left || !right) {
-    return 0;
+    return { minutes: 0, source: 'none' };
   }
 
-  return left.stageId === right.stageId ? 0 : 5;
+  if (left.stageId === right.stageId) {
+    return { minutes: 0, source: 'same-stage' };
+  }
+
+  const match = state.dataModel.stageDistances?.find((distance) => (
+    distance.eventId === state.activeEventId &&
+    distance.fromStageId === left.stageId &&
+    distance.toStageId === right.stageId
+  ));
+
+  return {
+    minutes: match?.minutes ?? 5,
+    source: match ? 'matrix' : 'fallback',
+  };
 }
 
 function getRoutePlan() {
   const selected = getSelectedSlots();
   const stages = getCurrentStages();
   const stageIndexById = new Map(stages.map((stage, index) => [stage.id, index]));
+  const conflictPairs = getConflictPairs(selected);
   const routeItems = selected.map((slot, index) => {
     const next = selected[index + 1] ?? null;
-    const moveTime = getMoveTimeBetween(slot, next);
+    const move = getMoveTimeBetween(slot, next);
     const gapToNext = next ? toMinutes(next.start) - toMinutes(slot.end) : null;
 
     return {
       ...slot,
       order: index + 1,
-      moveTime,
+      moveTime: move.minutes,
+      moveSource: move.source,
       gapToNext,
       hasOverlap: gapToNext !== null && gapToNext < 0,
-      hasTightMove: gapToNext !== null && gapToNext >= 0 && gapToNext < moveTime,
+      hasTightMove: gapToNext !== null && gapToNext >= 0 && gapToNext < move.minutes,
       stageColor: getStageColor(stageIndexById.get(slot.stageId) ?? index),
     };
   });
@@ -274,7 +314,8 @@ function getRoutePlan() {
   return {
     selected: routeItems,
     selectedCount: routeItems.length,
-    conflictCount: routeItems.filter((slot) => slot.conflict).length,
+    conflictCount: conflictPairs.length,
+    conflictPairs,
     moveTimeTotal: routeItems.reduce((total, slot) => total + slot.moveTime, 0),
   };
 }
@@ -454,6 +495,7 @@ function renderTimetable() {
         <div class="slot-time">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)}</div>
         <div class="slot-artist">${escapeHtml(slot.artist)}</div>
         <div class="slot-stage">${escapeHtml(stage?.shortName ?? stage?.name ?? '')}</div>
+        ${conflictClass ? '<div class="slot-state">時間衝突</div>' : selectedClass ? '<div class="slot-state selected-state">選択中</div>' : ''}
       </button>
     `;
   }).join('');
@@ -499,22 +541,32 @@ function renderConflictAlert(element, routePlan) {
   }
 
   element.hidden = false;
-  element.textContent = `${routePlan.conflictCount}件の時間衝突があります。重なっている枠は赤い表示で確認できます。`;
+  const pairLabels = routePlan.conflictPairs
+    .map((pair) => `${pair.left.artist}（${pair.left.start}-${pair.left.end}） と ${pair.right.artist}（${pair.right.start}-${pair.right.end}）`)
+    .join(' / ');
+  element.textContent = `${routePlan.conflictCount}件の時間衝突: ${pairLabels}`;
 }
 
 function renderRouteList(container, routePlan) {
   const stagesById = getStageMap();
 
   container.innerHTML = routePlan.selected.map((slot) => {
-    const moveLabel = slot.moveTime === 0 ? '次まで同ステージ' : `次まで徒歩 ${slot.moveTime}分`;
+    const moveLabel = slot.moveTime === 0
+      ? '次まで同ステージ'
+      : `次まで徒歩 ${slot.moveTime}分${slot.moveSource === 'fallback' ? '（距離未登録）' : ''}`;
     const moveState = slot.hasOverlap
       ? '時間衝突あり'
       : slot.hasTightMove
         ? '移動余裕が少ない'
         : moveLabel;
+    const statusLabel = slot.conflict
+      ? '時間衝突'
+      : slot.hasTightMove
+        ? '移動注意'
+        : '選択中';
 
     return `
-      <li class="route-item ${slot.conflict ? 'conflict' : ''}" style="--stage-color:${slot.stageColor};">
+      <li class="route-item ${slot.conflict ? 'conflict' : ''} ${slot.hasTightMove ? 'tight-move' : ''}" style="--stage-color:${slot.stageColor};">
         <div class="route-marker">${slot.order}</div>
         <div class="route-item-body">
           <div class="route-item-row">
@@ -522,6 +574,7 @@ function renderRouteList(container, routePlan) {
               <strong>${escapeHtml(slot.artist)}</strong><br />
               <span class="muted">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)} / ${escapeHtml(stagesById.get(slot.stageId)?.name ?? '未設定ステージ')}</span>
             </div>
+            <span class="route-status">${escapeHtml(statusLabel)}</span>
             ${state.isSharedView ? '' : `<button class="route-remove" type="button" data-remove-slot-id="${slot.id}">外す</button>`}
           </div>
           ${slot.gapToNext === null ? '' : `<p class="route-move ${slot.hasOverlap || slot.hasTightMove ? 'warning' : ''}">${escapeHtml(moveState)}</p>`}
@@ -538,6 +591,26 @@ function renderRouteList(container, routePlan) {
 function updateMobileRouteTray() {
   mobileRouteTray.classList.toggle('expanded', state.isMobileRouteTrayOpen);
   mobileRouteToggle.setAttribute('aria-expanded', String(state.isMobileRouteTrayOpen));
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = state.theme;
+  document.body.dataset.view = state.isSharedView ? 'shared' : 'edit';
+  layout.classList.toggle('shared-view', state.isSharedView);
+  themeSwitcher.querySelectorAll('[data-theme-value]').forEach((button) => {
+    const isActive = button.dataset.themeValue === state.theme;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+}
+
+function setTheme(theme) {
+  if (!THEMES.has(theme)) {
+    return;
+  }
+  state.theme = theme;
+  persistSelectedIds();
+  render();
 }
 
 function renderRoute() {
@@ -716,6 +789,7 @@ async function copyShareUrl() {
     params.set('plan', Array.from(state.selectedIds).join(','));
   }
   params.set('view', 'shared');
+  params.set('theme', state.theme);
   shareUrl.hash = params.toString();
 
   try {
@@ -977,11 +1051,11 @@ function handleCreateTimetableEntry(event) {
 
 function render() {
   const festival = getCurrentFestival();
-  const selected = getSelectedSlots();
-  const conflictCount = selected.filter((slot) => slot.conflict).length;
+  const routePlan = getRoutePlan();
 
   updateEventSwitcher();
   updateEntryStageOptions();
+  applyTheme();
 
   eventName.textContent = festival?.name ?? 'イベント未選択';
   eventMeta.textContent = festival ? `${festival.date} / ${festival.venue}` : '管理入力からイベントを追加してください。';
@@ -989,9 +1063,10 @@ function render() {
   commandEventMeta.textContent = festival ? `${festival.date} / ${festival.venue}` : '管理入力からイベントを追加してください。';
   sharedContext.hidden = !state.isSharedView;
   sharedContext.textContent = state.isSharedView
-    ? `ログイン不要の共有ビューです。${selected.length}組を表示中${conflictCount > 0 ? ` / ${conflictCount}件の時間衝突あり` : ''}。`
+    ? `ログイン不要の共有ビューです。${routePlan.selectedCount}組を表示中${routePlan.conflictCount > 0 ? ` / ${routePlan.conflictCount}件の時間衝突あり` : ''}。`
     : '';
   openPersonalPlanButton.hidden = !state.isSharedView;
+  routeEditButton.hidden = state.isSharedView;
   adminPanel.hidden = state.isSharedView;
   shareButton.textContent = state.isSharedView ? 'この共有URLをコピー' : '共有URLをコピー';
   routeShareButton.textContent = state.isSharedView ? 'この共有URLをコピー' : '共有URLをコピー';
@@ -1020,6 +1095,9 @@ eventSwitcher.addEventListener('change', (event) => switchActiveEvent(event.targ
 mobileRouteToggle.addEventListener('click', () => {
   state.isMobileRouteTrayOpen = !state.isMobileRouteTrayOpen;
   updateMobileRouteTray();
+});
+themeSwitcher.querySelectorAll('[data-theme-value]').forEach((button) => {
+  button.addEventListener('click', () => setTheme(button.dataset.themeValue));
 });
 document.querySelectorAll('[data-coming-soon]').forEach((button) => {
   button.addEventListener('click', () => showToast(button.dataset.comingSoon));
