@@ -179,6 +179,8 @@ bash -n scripts/*.sh
 
 - この導入は **OpenAI の Linear 参照実装そのまま** ではない。
 - `fes-route` 向けに、**GitHub Issues / Projects v2 を control plane にする repo-native runner** を持つ。
+- 通常の repo 作業は GitHub Issue + Hermes/agent delegation を正とし、Linear Project
+  `main` / `LINEAR_API_KEY` / OpenClaw-owned `CODEX_HOME` 前提には戻さない。
 - repo 側では `WORKFLOW.md`, repo-local skills, validation gate, runner を version 管理する。
 - 発想は Symphony だが、tracker adapter と実作業は GitHub repo-first +
   Hermes/agent delegation に寄せている。

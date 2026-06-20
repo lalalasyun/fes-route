@@ -54,6 +54,9 @@ Canonical field definitions, relation rules, and duplicate-prevention constraint
 - まずは単一 webapp として開始
 - 認証なしの閲覧・共有を優先する
 - 個人プランは local storage または anonymous share id で保持する
+- 現 prototype は vanilla JS / static-first を維持し、本実装では Cloudflare Workers / Workers Static Assets / Hono / D1 / R2 を第一候補として検証する
+
+Frontend / backend / database / auth / deployment / import worker の技術選定は `docs/technology-selection.md` を参照。
 
 ## Unknowns
 - 対応するチケットサイトの優先順位
@@ -61,6 +64,7 @@ Canonical field definitions, relation rules, and duplicate-prevention constraint
 - 匿名プランの保存期間
 - 提案を公開前に必ず承認するか、未検証ページとして出すか
 - テーマ推奨を event metadata で持つか user preference で上書きするかの最終仕様
+- D1 / R2 / Better Auth / Cloudflare Workers Builds が durable MVP の制約に合うか
 
 ## UI theming direction
 - レイアウトと情報設計は 1本化する
