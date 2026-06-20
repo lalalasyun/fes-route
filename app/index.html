@@ -8,6 +8,24 @@
   </head>
   <body>
     <div class="page">
+      <nav class="app-nav" aria-label="Primary">
+        <a class="brand" href="./" aria-label="Fes Route home">
+          <span class="brand-mark">FR</span>
+          <span>Fes Route</span>
+        </a>
+        <div class="nav-tabs" aria-label="Main sections">
+          <a class="nav-tab active" href="#timetable">タイムテーブル</a>
+          <a class="nav-tab" href="#route-panel">マイルート</a>
+          <button class="nav-tab" type="button" data-coming-soon="アーティスト検索は今後追加します">アーティスト</button>
+          <button class="nav-tab" type="button" data-coming-soon="マップは今後追加します">マップ</button>
+          <button class="nav-tab" type="button" data-coming-soon="ステージ情報は今後追加します">ステージ情報</button>
+        </div>
+        <div class="nav-actions">
+          <button class="icon-button" type="button" data-coming-soon="検索は今後追加します" aria-label="検索">⌕</button>
+          <button class="icon-button" type="button" data-coming-soon="保存済みプランは今後追加します" aria-label="保存済み">☆</button>
+        </div>
+      </nav>
+
       <header class="hero">
         <div>
           <p class="eyebrow">Fes Route / Prototype</p>
@@ -21,6 +39,21 @@
           <button id="reset-button" class="ghost">選択をリセット</button>
         </div>
       </header>
+
+      <section class="command-bar" aria-label="Event controls">
+        <label class="field compact-field">
+          <span>イベント</span>
+          <select id="event-switcher"></select>
+        </label>
+        <div class="command-meta">
+          <strong id="command-event-name">イベント未選択</strong>
+          <span id="command-event-meta" class="muted"></span>
+        </div>
+        <div class="command-actions">
+          <button class="ghost small" type="button" data-coming-soon="アーティスト検索は今後追加します">検索</button>
+          <button class="ghost small" type="button" data-coming-soon="ステージ絞り込みは今後追加します">ステージ絞り込み</button>
+        </div>
+      </section>
 
       <main class="layout">
         <section class="panel main-panel">
@@ -39,16 +72,30 @@
         </section>
 
         <aside class="sidebar">
+          <section id="route-panel" class="panel route-panel">
+            <div class="route-panel-head">
+              <div>
+                <p class="eyebrow">My Route</p>
+                <h2>あなたの周り順</h2>
+              </div>
+              <button class="ghost small" type="button" data-coming-soon="並び替え編集は今後追加します">編集</button>
+            </div>
+            <div id="route-metrics" class="route-metrics" aria-label="Route summary"></div>
+            <p id="route-summary" class="muted">まだ未選択です。</p>
+            <p id="route-conflict-alert" class="route-conflict-alert" hidden></p>
+            <ol id="route-list" class="route-list"></ol>
+            <div class="route-actions">
+              <button id="route-share-button" class="primary" type="button">共有URLをコピー</button>
+              <button id="route-reset-button" class="ghost" type="button">選択をリセット</button>
+            </div>
+          </section>
+
           <section id="admin-panel" class="panel">
             <div class="panel-header stacked">
               <div>
                 <h2>管理入力</h2>
                 <p class="muted">イベント、ステージ、タイムテーブルを手動で登録します。</p>
               </div>
-              <label class="field">
-                <span>編集中のイベント</span>
-                <select id="event-switcher"></select>
-              </label>
             </div>
 
             <div class="admin-stack">
@@ -117,12 +164,6 @@
           </section>
 
           <section class="panel">
-            <h2>あなたの周り順</h2>
-            <p id="route-summary" class="muted">まだ未選択です。</p>
-            <ol id="route-list" class="route-list"></ol>
-          </section>
-
-          <section class="panel">
             <h2>みんなの比較</h2>
             <p class="muted">共有URLを名前付きで追加すると、重なっている出演枠と分かれている出演枠を一覧できます。</p>
             <form id="comparison-form" class="comparison-form">
@@ -152,6 +193,22 @@
         </aside>
       </main>
     </div>
+
+    <section id="mobile-route-tray" class="mobile-route-tray" aria-label="Mobile route tray">
+      <button id="mobile-route-toggle" class="mobile-route-toggle" type="button" aria-expanded="false" aria-controls="mobile-route-content">
+        <span>マイルート</span>
+        <strong id="mobile-route-summary">選択 0組 / 移動 0分 / 衝突 0件</strong>
+      </button>
+      <div id="mobile-route-content" class="mobile-route-content">
+        <div id="mobile-route-metrics" class="route-metrics"></div>
+        <p id="mobile-route-conflict-alert" class="route-conflict-alert" hidden></p>
+        <ol id="mobile-route-list" class="route-list compact"></ol>
+        <div class="route-actions">
+          <button id="mobile-share-button" class="primary" type="button">共有URLをコピー</button>
+          <button id="mobile-reset-button" class="ghost" type="button">選択をリセット</button>
+        </div>
+      </div>
+    </section>
 
     <script type="module" src="../src/app.js"></script>
   </body>

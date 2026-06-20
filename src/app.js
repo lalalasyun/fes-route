@@ -18,18 +18,33 @@ const state = {
   selectedIds: new Set(),
   isSharedView: false,
   comparisonPlans: [],
+  isMobileRouteTrayOpen: false,
 };
 
 const eventName = document.querySelector('#event-name');
 const eventMeta = document.querySelector('#event-meta');
+const commandEventName = document.querySelector('#command-event-name');
+const commandEventMeta = document.querySelector('#command-event-meta');
 const timetable = document.querySelector('#timetable');
 const emptyState = document.querySelector('#empty-state');
 const routeList = document.querySelector('#route-list');
 const routeSummary = document.querySelector('#route-summary');
+const routeMetrics = document.querySelector('#route-metrics');
+const routeConflictAlert = document.querySelector('#route-conflict-alert');
 const sharedContext = document.querySelector('#shared-context');
 const openPersonalPlanButton = document.querySelector('#open-personal-plan-button');
 const shareButton = document.querySelector('#share-button');
 const resetButton = document.querySelector('#reset-button');
+const routeShareButton = document.querySelector('#route-share-button');
+const routeResetButton = document.querySelector('#route-reset-button');
+const mobileRouteTray = document.querySelector('#mobile-route-tray');
+const mobileRouteToggle = document.querySelector('#mobile-route-toggle');
+const mobileRouteSummary = document.querySelector('#mobile-route-summary');
+const mobileRouteMetrics = document.querySelector('#mobile-route-metrics');
+const mobileRouteConflictAlert = document.querySelector('#mobile-route-conflict-alert');
+const mobileRouteList = document.querySelector('#mobile-route-list');
+const mobileShareButton = document.querySelector('#mobile-share-button');
+const mobileResetButton = document.querySelector('#mobile-reset-button');
 const eventSwitcher = document.querySelector('#event-switcher');
 const adminPanel = document.querySelector('#admin-panel');
 
@@ -191,6 +206,11 @@ function getStageMap() {
   return new Map(getCurrentStages().map((stage) => [stage.id, stage]));
 }
 
+function getStageColor(index) {
+  const colors = ['#76e4c3', '#8ba8ff', '#ffb86b', '#f472b6', '#a3e635', '#67e8f9'];
+  return colors[index % colors.length];
+}
+
 function toMinutes(time) {
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + minutes;
@@ -221,6 +241,42 @@ function getSelectedSlots() {
   });
 
   return selected.map((slot) => ({ ...slot, conflict: conflictIds.has(slot.id) }));
+}
+
+function getMoveTimeBetween(left, right) {
+  if (!left || !right) {
+    return 0;
+  }
+
+  return left.stageId === right.stageId ? 0 : 5;
+}
+
+function getRoutePlan() {
+  const selected = getSelectedSlots();
+  const stages = getCurrentStages();
+  const stageIndexById = new Map(stages.map((stage, index) => [stage.id, index]));
+  const routeItems = selected.map((slot, index) => {
+    const next = selected[index + 1] ?? null;
+    const moveTime = getMoveTimeBetween(slot, next);
+    const gapToNext = next ? toMinutes(next.start) - toMinutes(slot.end) : null;
+
+    return {
+      ...slot,
+      order: index + 1,
+      moveTime,
+      gapToNext,
+      hasOverlap: gapToNext !== null && gapToNext < 0,
+      hasTightMove: gapToNext !== null && gapToNext >= 0 && gapToNext < moveTime,
+      stageColor: getStageColor(stageIndexById.get(slot.stageId) ?? index),
+    };
+  });
+
+  return {
+    selected: routeItems,
+    selectedCount: routeItems.length,
+    conflictCount: routeItems.filter((slot) => slot.conflict).length,
+    moveTimeTotal: routeItems.reduce((total, slot) => total + slot.moveTime, 0),
+  };
 }
 
 function getSlotsById() {
@@ -391,7 +447,7 @@ function renderTimetable() {
       <button
         class="timeline-slot ${selectedClass} ${conflictClass}"
         data-slot-id="${slot.id}"
-        style="--lane:${stageIndex}; --slot-top:${top}; --slot-height:${height};"
+        style="--lane:${stageIndex}; --slot-top:${top}; --slot-height:${height}; --stage-color:${getStageColor(stageIndex)};"
         aria-label="${escapeHtml(`${slot.artist} ${slot.start}-${slot.end} ${stage?.name ?? ''}`)}"
         ${state.isSharedView ? 'disabled' : ''}
       >
@@ -406,8 +462,8 @@ function renderTimetable() {
     <section class="timeline-board" style="--stage-count:${stageCount}; --timeline-height:${metrics.timelineHeight}px;">
       <div class="timeline-header">
         <div class="timeline-header-spacer">Time</div>
-        ${festival.stages.map((stage) => `
-          <div class="timeline-stage-heading">
+        ${festival.stages.map((stage, index) => `
+          <div class="timeline-stage-heading" style="--stage-color:${getStageColor(index)};">
             <span class="timeline-stage-short">${escapeHtml(stage.shortName ?? stage.name)}</span>
             <span class="timeline-stage-full">${escapeHtml(stage.name)}</span>
           </div>
@@ -427,34 +483,87 @@ function renderTimetable() {
   });
 }
 
-function renderRoute() {
-  const selected = getSelectedSlots();
-  const stagesById = getStageMap();
+function renderRouteMetrics(container, routePlan) {
+  container.innerHTML = `
+    <span><strong>${routePlan.selectedCount}</strong>選択</span>
+    <span><strong>${routePlan.moveTimeTotal}</strong>分移動</span>
+    <span class="${routePlan.conflictCount > 0 ? 'danger' : ''}"><strong>${routePlan.conflictCount}</strong>衝突</span>
+  `;
+}
 
-  if (selected.length === 0) {
-    routeSummary.textContent = state.isSharedView
-      ? 'この共有プランにはまだ選択された出演枠がありません。'
-      : 'まだ未選択です。タイムテーブルから気になるアーティストを選んでください。';
-    routeList.innerHTML = '';
+function renderConflictAlert(element, routePlan) {
+  if (routePlan.conflictCount === 0) {
+    element.hidden = true;
+    element.textContent = '';
     return;
   }
 
-  const conflictCount = selected.filter((slot) => slot.conflict).length;
-  routeSummary.textContent = `${selected.length}組を選択中 / ${conflictCount > 0 ? `${conflictCount}件の時間衝突あり` : '時間衝突なし'}`;
-  routeList.innerHTML = selected.map((slot) => `
-    <li class="route-item ${slot.conflict ? 'conflict' : ''}">
-      <div class="route-item-row">
-        <div>
-          <strong>${escapeHtml(slot.artist)}</strong><br />
-          <span class="muted">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)} / ${escapeHtml(stagesById.get(slot.stageId)?.name ?? '未設定ステージ')}</span>
+  element.hidden = false;
+  element.textContent = `${routePlan.conflictCount}件の時間衝突があります。重なっている枠は赤い表示で確認できます。`;
+}
+
+function renderRouteList(container, routePlan) {
+  const stagesById = getStageMap();
+
+  container.innerHTML = routePlan.selected.map((slot) => {
+    const moveLabel = slot.moveTime === 0 ? '次まで同ステージ' : `次まで徒歩 ${slot.moveTime}分`;
+    const moveState = slot.hasOverlap
+      ? '時間衝突あり'
+      : slot.hasTightMove
+        ? '移動余裕が少ない'
+        : moveLabel;
+
+    return `
+      <li class="route-item ${slot.conflict ? 'conflict' : ''}" style="--stage-color:${slot.stageColor};">
+        <div class="route-marker">${slot.order}</div>
+        <div class="route-item-body">
+          <div class="route-item-row">
+            <div>
+              <strong>${escapeHtml(slot.artist)}</strong><br />
+              <span class="muted">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)} / ${escapeHtml(stagesById.get(slot.stageId)?.name ?? '未設定ステージ')}</span>
+            </div>
+            ${state.isSharedView ? '' : `<button class="route-remove" type="button" data-remove-slot-id="${slot.id}">外す</button>`}
+          </div>
+          ${slot.gapToNext === null ? '' : `<p class="route-move ${slot.hasOverlap || slot.hasTightMove ? 'warning' : ''}">${escapeHtml(moveState)}</p>`}
         </div>
-        ${state.isSharedView ? '' : `<button class="route-remove" type="button" data-remove-slot-id="${slot.id}">外す</button>`}
-      </div>
-    </li>
-  `).join('');
-  routeList.querySelectorAll('[data-remove-slot-id]').forEach((button) => {
+      </li>
+    `;
+  }).join('');
+
+  container.querySelectorAll('[data-remove-slot-id]').forEach((button) => {
     button.addEventListener('click', () => toggleSlot(button.dataset.removeSlotId));
   });
+}
+
+function updateMobileRouteTray() {
+  mobileRouteTray.classList.toggle('expanded', state.isMobileRouteTrayOpen);
+  mobileRouteToggle.setAttribute('aria-expanded', String(state.isMobileRouteTrayOpen));
+}
+
+function renderRoute() {
+  const routePlan = getRoutePlan();
+  const emptyMessage = state.isSharedView
+    ? 'この共有プランにはまだ選択された出演枠がありません。'
+    : 'まだ未選択です。タイムテーブルから気になるアーティストを選んでください。';
+  const summaryText = routePlan.selectedCount === 0
+    ? emptyMessage
+    : `${routePlan.selectedCount}組を選択中 / 移動 ${routePlan.moveTimeTotal}分（未登録区間は徒歩5分） / ${routePlan.conflictCount > 0 ? `${routePlan.conflictCount}件の時間衝突あり` : '時間衝突なし'}`;
+
+  routeSummary.textContent = summaryText;
+  mobileRouteSummary.textContent = `選択 ${routePlan.selectedCount}組 / 移動 ${routePlan.moveTimeTotal}分 / 衝突 ${routePlan.conflictCount}件`;
+  renderRouteMetrics(routeMetrics, routePlan);
+  renderRouteMetrics(mobileRouteMetrics, routePlan);
+  renderConflictAlert(routeConflictAlert, routePlan);
+  renderConflictAlert(mobileRouteConflictAlert, routePlan);
+
+  if (routePlan.selectedCount === 0) {
+    routeList.innerHTML = '';
+    mobileRouteList.innerHTML = '';
+    return;
+  }
+
+  renderRouteList(routeList, routePlan);
+  renderRouteList(mobileRouteList, routePlan);
 }
 
 function parseSharedPlanUrl(value) {
@@ -876,6 +985,8 @@ function render() {
 
   eventName.textContent = festival?.name ?? 'イベント未選択';
   eventMeta.textContent = festival ? `${festival.date} / ${festival.venue}` : '管理入力からイベントを追加してください。';
+  commandEventName.textContent = festival?.name ?? 'イベント未選択';
+  commandEventMeta.textContent = festival ? `${festival.date} / ${festival.venue}` : '管理入力からイベントを追加してください。';
   sharedContext.hidden = !state.isSharedView;
   sharedContext.textContent = state.isSharedView
     ? `ログイン不要の共有ビューです。${selected.length}組を表示中${conflictCount > 0 ? ` / ${conflictCount}件の時間衝突あり` : ''}。`
@@ -883,20 +994,36 @@ function render() {
   openPersonalPlanButton.hidden = !state.isSharedView;
   adminPanel.hidden = state.isSharedView;
   shareButton.textContent = state.isSharedView ? 'この共有URLをコピー' : '共有URLをコピー';
+  routeShareButton.textContent = state.isSharedView ? 'この共有URLをコピー' : '共有URLをコピー';
+  mobileShareButton.textContent = state.isSharedView ? 'この共有URLをコピー' : '共有URLをコピー';
   resetButton.disabled = state.isSharedView;
+  routeResetButton.disabled = state.isSharedView;
+  mobileResetButton.disabled = state.isSharedView;
   eventSwitcher.disabled = state.isSharedView;
 
   renderTimetable();
   renderRoute();
   renderComparison();
+  updateMobileRouteTray();
 }
 
 hydrateStateFromLocation();
 
 shareButton.addEventListener('click', copyShareUrl);
+routeShareButton.addEventListener('click', copyShareUrl);
+mobileShareButton.addEventListener('click', copyShareUrl);
 resetButton.addEventListener('click', resetPlan);
+routeResetButton.addEventListener('click', resetPlan);
+mobileResetButton.addEventListener('click', resetPlan);
 openPersonalPlanButton.addEventListener('click', openSharedPlanAsPersonal);
 eventSwitcher.addEventListener('change', (event) => switchActiveEvent(event.target.value));
+mobileRouteToggle.addEventListener('click', () => {
+  state.isMobileRouteTrayOpen = !state.isMobileRouteTrayOpen;
+  updateMobileRouteTray();
+});
+document.querySelectorAll('[data-coming-soon]').forEach((button) => {
+  button.addEventListener('click', () => showToast(button.dataset.comingSoon));
+});
 eventForm.addEventListener('submit', handleCreateEvent);
 stageForm.addEventListener('submit', handleCreateStage);
 entryForm.addEventListener('submit', handleCreateTimetableEntry);
