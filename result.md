@@ -1,29 +1,31 @@
 # Hermes agent result
 
-- run_id: `t_09b99a5a`
+- run_id: `t_f62f2226`
 - workspace: `/home/agent/workspace/fes-route`
 - branch: `docs/issue-26-requirements-review`
 - PR: https://github.com/lalalasyun/fes-route/pull/33
-- source issue: https://github.com/lalalasyun/fes-route/issues/26
+- source issue: https://github.com/lalalasyun/fes-route/issues/34
 
-## Created issues
+## Summary
 
-- https://github.com/lalalasyun/fes-route/issues/27 - route sidebar timeline stepper
-- https://github.com/lalalasyun/fes-route/issues/28 - mobile route tray
-- https://github.com/lalalasyun/fes-route/issues/29 - movement time and conflict detail
-- https://github.com/lalalasyun/fes-route/issues/30 - shared route view
-- https://github.com/lalalasyun/fes-route/issues/31 - durable Cloudflare foundation spike
-- https://github.com/lalalasyun/fes-route/issues/32 - Standard theme and stage tokens
+- Replaced old runner-oriented workflow docs with the current GitHub repo-first
+  Hermes/agent delegation contract.
+- Removed repo-local polling runner assets and renamed the validation gate to
+  `./scripts/validate-workflow.sh`.
+- Updated README, WORKFLOW, technology-selection notes, PR template, and
+  repo-local skills to match the current operating model.
 
 ## Validation
 
 - `npm run check` - passed
 - `git diff --check` - passed
-- `./scripts/symphony-validate.sh` - passed
+- `bash -n scripts/validate-workflow.sh` - passed
+- `./scripts/validate-workflow.sh` - passed
+- legacy workflow-name stale-reference scan - passed with no matches
 
 ## Residual risks / follow-ups
 
-- Cloudflare Workers + D1 + R2 remains the durable MVP first candidate, but Issue #31 should validate app structure, D1 migrations, R2 source attachments, admin auth, and shareId migration before runtime migration.
-- Attendee anonymous flow and admin auth boundary are documented as compatible, but the concrete admin auth mechanism still needs spike confirmation.
-- Ticket-site import helper is intentionally operator-triggered/manual-review first; supported site priority remains open.
-- Next implementation should start with prototype UX hardening, especially Issues #27, #28, and #29, before locking durable API/schema details.
+- No residual implementation risk identified for the docs/script rewrite.
+- Future workflow automation should stay aligned with GitHub Issue / PR tracking
+  and Hermes/agent delegation, without reintroducing repo-local polling runners
+  or OpenClaw-owned execution state.

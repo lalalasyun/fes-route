@@ -1,12 +1,12 @@
 ---
 name: github_project
 description:
-  GitHub Issues / Projects v2 を Symphony の control plane として扱うための補助メモ。
+  GitHub Issues / Projects v2 を Hermes/agent delegation の追跡面として扱うための補助メモ。
 ---
 
 # GitHub Project
 
-`fes-route` では Linear ではなく **GitHub Issues + GitHub Projects v2** を tracker として使う。
+`fes-route` では **GitHub Issues + GitHub Projects v2** を tracker として使う。
 
 ## 基本方針
 

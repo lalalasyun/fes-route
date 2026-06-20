@@ -25,7 +25,7 @@ lightweight full-stack TypeScript app** を第一候補にする。ただし現�
 - admin flow は auth 必須にする。event / timetable mutation, proposal review, duplicate merge, import helper execution は admin boundary の内側に置く。
 - Admin surface は lightweight custom admin first とする。Payload CMS は後回しの代替案に留める。
 - Ticket-site import は operator-triggered / manual review から始める。自動巡回 crawler は MVP 外。
-- GitHub Issue + Hermes/agent delegation を現在の repo 作業単位にする。Linear / OpenClaw runner 前提は復活させない。
+- GitHub Issue + Hermes/agent delegation を現在の repo 作業単位にする。OpenClaw-owned repo runner 前提は復活させない。
 
 ### Validate with spikes
 
@@ -203,16 +203,16 @@ after manual import assistance proves valuable and rate-limit behavior is unders
 Repo work is tracked through GitHub Issues / PRs and delegated through Hermes to the
 `agent` workspace. OpenClaw is the Discord intake / bridge, not the repo editor.
 
-This decision intentionally does not adopt the older Linear Project `main`,
-`LINEAR_API_KEY`, OpenAI Symphony binary, or OpenClaw-owned `CODEX_HOME` runner
-direction from PR #18 / Issue #19. The current workflow remains:
+This decision intentionally does not adopt the older external tracker token,
+standalone repo polling runner, or OpenClaw-owned `CODEX_HOME` direction from
+PR #18 / Issue #19. The current workflow remains:
 
 - GitHub Issue is the product / engineering work item.
 - Hermes Kanban task delegates coding to `agent`.
 - `agent` works under `/home/agent/workspace/fes-route`.
 - Validation, commit, push, and PR creation happen from the repo workspace.
-- `WORKFLOW.md`, `docs/symphony-guide.md`, and `scripts/symphony-validate.sh`
-  define the repo-local contract.
+- `WORKFLOW.md`, `docs/hermes-agent-workflow.md`, and
+  `scripts/validate-workflow.sh` define the repo-local contract.
 
 ## Alternatives considered
 
@@ -238,7 +238,7 @@ Useful if editorial workflows become the largest problem. For the MVP, a small c
 admin and review queue is likely cheaper to ship. Payload remains a later candidate
 rather than a first implementation dependency.
 
-### Linear / Symphony runner migration
+### External tracker runner migration
 
 Not adopted. It conflicts with the current GitHub Issue + Hermes/agent delegation
 workflow and would move repo work back toward older runner assumptions.
