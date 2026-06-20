@@ -3,7 +3,7 @@
 - run_id: `t_273ff955`
 - workspace: `/home/agent/workspace/fes-route`
 - branch: `docs/issue-17-technology-selection`
-- PR: pending
+- PR: https://github.com/lalalasyun/fes-route/pull/25
 
 ## Validation
 
