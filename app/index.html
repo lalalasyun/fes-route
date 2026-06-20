@@ -123,6 +123,25 @@
           </section>
 
           <section class="panel">
+            <h2>みんなの比較</h2>
+            <p class="muted">共有URLを名前付きで追加すると、重なっている出演枠と分かれている出演枠を一覧できます。</p>
+            <form id="comparison-form" class="comparison-form">
+              <label class="field">
+                <span>表示名</span>
+                <input id="comparison-name" name="name" type="text" placeholder="Aki のプラン" required />
+              </label>
+              <label class="field">
+                <span>共有URL</span>
+                <input id="comparison-url" name="url" type="url" placeholder="https://...#event=...&plan=..." required />
+              </label>
+              <button class="primary" type="submit">比較に追加</button>
+            </form>
+            <p id="comparison-message" class="form-message" hidden></p>
+            <div id="comparison-summary" class="comparison-summary"></div>
+            <div id="comparison-list" class="comparison-list"></div>
+          </section>
+
+          <section class="panel">
             <h2>このプロトタイプで見たいこと</h2>
             <ul class="notes">
               <li>タイムテーブルから迷わず選べるか</li>

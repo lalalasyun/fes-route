@@ -1,6 +1,7 @@
 import { buildSampleFestival, sampleDataModel } from './lib/sample-data.js';
 
 const STORAGE_KEY_PREFIX = 'fes-route:plan:';
+const COMPARISON_STORAGE_KEY_PREFIX = 'fes-route:comparison:';
 
 function readHashState() {
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
@@ -16,6 +17,7 @@ const state = {
   activeEventId: '',
   selectedIds: new Set(),
   isSharedView: false,
+  comparisonPlans: [],
 };
 
 const eventName = document.querySelector('#event-name');
@@ -34,14 +36,22 @@ const adminPanel = document.querySelector('#admin-panel');
 const eventForm = document.querySelector('#event-form');
 const stageForm = document.querySelector('#stage-form');
 const entryForm = document.querySelector('#entry-form');
+const comparisonForm = document.querySelector('#comparison-form');
 
 const eventFormMessage = document.querySelector('#event-form-message');
 const stageFormMessage = document.querySelector('#stage-form-message');
 const entryFormMessage = document.querySelector('#entry-form-message');
+const comparisonMessage = document.querySelector('#comparison-message');
 const entryStageSelect = document.querySelector('#entry-form-stage');
+const comparisonSummary = document.querySelector('#comparison-summary');
+const comparisonList = document.querySelector('#comparison-list');
 
 function getPlanStorageKey(eventId) {
   return `${STORAGE_KEY_PREFIX}${eventId}`;
+}
+
+function getComparisonStorageKey(eventId) {
+  return `${COMPARISON_STORAGE_KEY_PREFIX}${eventId}`;
 }
 
 function loadStoredSelectedIds(eventId) {
@@ -55,6 +65,46 @@ function loadStoredSelectedIds(eventId) {
     return Array.isArray(parsed) ? parsed.filter((value) => typeof value === 'string' && value) : [];
   } catch {
     return [];
+  }
+}
+
+function loadStoredComparisonPlans(eventId) {
+  if (!eventId) {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(getComparisonStorageKey(eventId));
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .filter((plan) => (
+        plan &&
+        typeof plan.id === 'string' &&
+        typeof plan.name === 'string' &&
+        Array.isArray(plan.selectedIds)
+      ))
+      .map((plan) => ({
+        id: plan.id,
+        name: plan.name,
+        selectedIds: plan.selectedIds.filter((value) => typeof value === 'string' && value),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function persistComparisonPlans() {
+  if (!state.activeEventId) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(getComparisonStorageKey(state.activeEventId), JSON.stringify(state.comparisonPlans));
+  } catch {
+    // Comparison is a convenience layer; the source share URLs remain reusable.
   }
 }
 
@@ -123,6 +173,7 @@ function hydrateStateFromLocation() {
       ? hashState.selectedIds
       : loadStoredSelectedIds(activeEventId)
   );
+  state.comparisonPlans = loadStoredComparisonPlans(activeEventId);
 }
 
 function getCurrentStages() {
@@ -170,6 +221,11 @@ function getSelectedSlots() {
   });
 
   return selected.map((slot) => ({ ...slot, conflict: conflictIds.has(slot.id) }));
+}
+
+function getSlotsById() {
+  const festival = getCurrentFestival();
+  return new Map((festival?.slots ?? []).map((slot) => [slot.id, slot]));
 }
 
 function formatTimeLabel(minutes) {
@@ -401,6 +457,138 @@ function renderRoute() {
   });
 }
 
+function parseSharedPlanUrl(value) {
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(value, window.location.href);
+  } catch {
+    return { error: '共有URLを正しく入力してください。' };
+  }
+
+  const params = new URLSearchParams(parsedUrl.hash.replace(/^#/, ''));
+  const eventId = params.get('event') ?? '';
+  const selectedIds = (params.get('plan') ?? '').split(',').filter(Boolean);
+
+  if (!eventId || eventId !== state.activeEventId) {
+    return { error: '現在表示中のイベントと同じ共有URLを追加してください。' };
+  }
+
+  if (selectedIds.length === 0) {
+    return { error: '選択された出演枠を含む共有URLを追加してください。' };
+  }
+
+  const slotsById = getSlotsById();
+  const validSelectedIds = selectedIds.filter((slotId) => slotsById.has(slotId));
+  if (validSelectedIds.length === 0) {
+    return { error: 'このイベント内で使える出演枠が見つかりませんでした。' };
+  }
+
+  return { eventId, selectedIds: [...new Set(validSelectedIds)] };
+}
+
+function handleAddComparisonPlan(event) {
+  event.preventDefault();
+
+  const formData = new FormData(comparisonForm);
+  const name = String(formData.get('name') ?? '').trim();
+  const url = String(formData.get('url') ?? '').trim();
+
+  if (!name || !url) {
+    setMessage(comparisonMessage, '表示名と共有URLは必須です。', true);
+    return;
+  }
+
+  const parsed = parseSharedPlanUrl(url);
+  if (parsed.error) {
+    setMessage(comparisonMessage, parsed.error, true);
+    return;
+  }
+
+  state.comparisonPlans.push({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name,
+    selectedIds: parsed.selectedIds,
+  });
+  persistComparisonPlans();
+  comparisonForm.reset();
+  setMessage(comparisonMessage, `${name} を比較に追加しました。`);
+  renderComparison();
+}
+
+function removeComparisonPlan(planId) {
+  state.comparisonPlans = state.comparisonPlans.filter((plan) => plan.id !== planId);
+  persistComparisonPlans();
+  setMessage(comparisonMessage, '');
+  renderComparison();
+}
+
+function renderComparison() {
+  const slotsById = getSlotsById();
+  const stagesById = getStageMap();
+  const plans = state.comparisonPlans
+    .map((plan) => ({
+      ...plan,
+      selectedIds: plan.selectedIds.filter((slotId) => slotsById.has(slotId)),
+    }))
+    .filter((plan) => plan.selectedIds.length > 0);
+
+  if (plans.length === 0) {
+    comparisonSummary.innerHTML = '<p class="muted">まだ比較プランがありません。友人の共有URLを追加してください。</p>';
+    comparisonList.innerHTML = '';
+    return;
+  }
+
+  const planNamesBySlotId = new Map();
+  plans.forEach((plan) => {
+    plan.selectedIds.forEach((slotId) => {
+      const names = planNamesBySlotId.get(slotId) ?? [];
+      names.push(plan.name);
+      planNamesBySlotId.set(slotId, names);
+    });
+  });
+
+  const comparedSlots = Array.from(planNamesBySlotId.entries())
+    .map(([slotId, names]) => ({ slot: slotsById.get(slotId), names }))
+    .filter((item) => item.slot)
+    .sort((a, b) => toMinutes(a.slot.start) - toMinutes(b.slot.start));
+  const overlapCount = comparedSlots.filter((item) => item.names.length > 1).length;
+
+  comparisonSummary.innerHTML = `
+    <div class="comparison-metrics">
+      <span><strong>${plans.length}</strong>人</span>
+      <span><strong>${comparedSlots.length}</strong>枠</span>
+      <span><strong>${overlapCount}</strong>件重なり</span>
+    </div>
+    <div class="comparison-plan-chips">
+      ${plans.map((plan) => `
+        <button class="comparison-plan-chip" type="button" data-remove-comparison-id="${escapeHtml(plan.id)}" aria-label="${escapeHtml(`${plan.name} を比較から外す`)}">
+          ${escapeHtml(plan.name)} <span>×</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  comparisonList.innerHTML = comparedSlots.map(({ slot, names }) => {
+    const overlapClass = names.length > 1 ? 'overlap' : 'solo';
+    return `
+      <article class="comparison-item ${overlapClass}">
+        <div>
+          <div class="comparison-item-time">${escapeHtml(slot.start)} - ${escapeHtml(slot.end)}</div>
+          <h3>${escapeHtml(slot.artist)}</h3>
+          <p>${escapeHtml(stagesById.get(slot.stageId)?.name ?? '未設定ステージ')}</p>
+        </div>
+        <div class="comparison-name-stack">
+          ${names.map((name) => `<span>${escapeHtml(name)}</span>`).join('')}
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  comparisonSummary.querySelectorAll('[data-remove-comparison-id]').forEach((button) => {
+    button.addEventListener('click', () => removeComparisonPlan(button.dataset.removeComparisonId));
+  });
+}
+
 function showToast(message) {
   const toast = document.createElement('div');
   toast.className = 'toast';
@@ -446,9 +634,11 @@ function switchActiveEvent(eventId) {
 
   state.activeEventId = eventId;
   state.selectedIds = new Set(loadStoredSelectedIds(eventId));
+  state.comparisonPlans = loadStoredComparisonPlans(eventId);
   persistSelectedIds();
   setMessage(stageFormMessage, '');
   setMessage(entryFormMessage, '');
+  setMessage(comparisonMessage, '');
   render();
 }
 
@@ -698,6 +888,7 @@ function render() {
 
   renderTimetable();
   renderRoute();
+  renderComparison();
 }
 
 hydrateStateFromLocation();
@@ -709,6 +900,7 @@ eventSwitcher.addEventListener('change', (event) => switchActiveEvent(event.targ
 eventForm.addEventListener('submit', handleCreateEvent);
 stageForm.addEventListener('submit', handleCreateStage);
 entryForm.addEventListener('submit', handleCreateTimetableEntry);
+comparisonForm.addEventListener('submit', handleAddComparisonPlan);
 window.addEventListener('hashchange', () => {
   hydrateStateFromLocation();
   render();
